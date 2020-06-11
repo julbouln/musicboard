@@ -1,0 +1,59 @@
+This project only use a CODEC, a QuadSPI NOR-flash and a STM32F7 microcontroller to provide a complete MIDI + audio USB soundcard.
+
+Continuation of https://github.com/julbouln/stm32f7discovery_midi_synth prototype. It now uses a memory and computing optimized version of https://github.com/schellingb/TinySoundFont and includes STM32 cubemx source code. A dedicated custom board is also provided even though STM32F746 discovery board is supported by the firmware.
+
+Features:
+- Composite USB audio, USB MIDI and USB mass storage
+- Integrated SF2 MIDI syntheziser
+- Easy SF2 soundfont customization with USB mass storage
+- Mixed MIDI synthesis and raw audio
+
+Custom board with minimal requirements:
+- STM32F746VET6 LQFP100 320kb ram + 512kb flash
+- S25FL256S 32mb nor flash
+- WM8731 codec
+
+Update SF2 font (Linux):
+When connected, Linux should show the Flash as mass storage:
+sd 6:0:0:0: [sdb] 8192 4096-byte logical blocks: (33.6 MB/32.0 MiB)
+sd 6:0:0:0: [sdb] Write Protect is off
+sd 6:0:0:0: [sdb] Mode Sense: 22 00 00 00
+sd 6:0:0:0: [sdb] Write cache: disabled, read cache: enabled, doesn't support DPO or FUA
+sd 6:0:0:0: [sdb] Attached SCSI removable disk
+You just need to dd the sf2 file to the disk (can take several minutes):
+# dd if=yourfont.sf2 of=/dev/sdb bs=4096
+
+Update SF2 font (balena Etcher)
+You can also update the SF2 using balena Etcher https://www.balena.io/etcher/. This program is intended for OS image, but you can use it for SF2:
+- you will need to rename your extension from .sf2 to .bin so Etcher can accept the file
+- Etcher will warn you that the image is not an OS, just hit continue and select SF2 ROM drive
+
+LED should blink if the font is properly recognized.
+
+Notes:
+Firmware tested with arm-none-eabi-gcc 9.2.1 20191025
+SF2 fonts tested:
+- TimGM6mb http://www.timbrechbill.com/saxguru/Timidity.php
+- GeneralUser GS http://www.schristiancollins.com/generaluser.php (custom board only, 32mb font)
+Default make for STM32F746-DISCO board, use "make BOARD=MUSICBOARD" for custom board firmware.
+
+TODO:
+- bug: USB Audio asynchronous feedback does not seems to work in USB composite mode
+- feature: TinySoundFont does not fully implement SF2 (modulators)
+- feature: Add chorus & reverb
+- feature: USB-MIDI to MIDI interface
+- feature: Audio IN
+
+Sources:
+- https://github.com/STMicroelectronics/STM32CubeF7
+
+SF2:
+- https://github.com/schellingb/TinySoundFont
+
+USB audio with asynchronous feedback
+- https://github.com/dragonman225/stm32f469-usbaudio
+- https://github.com/ada-sound/X-CUBE-USB-AUDIO
+- https://github.com/Lefucjusz/Lefucjusz-USB-DAC
+
+USB composite:
+- https://github.com/sanuch14/STM32_CompositeHID_CDC
