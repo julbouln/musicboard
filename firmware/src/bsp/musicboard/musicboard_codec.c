@@ -266,9 +266,7 @@ uint32_t wm8731_Stop(uint16_t DeviceAddr, uint32_t CodecPdwnMode)
 uint32_t wm8731_SetVolume(uint16_t DeviceAddr, uint8_t Volume)
 {
   uint32_t counter = 0;
-
   int voldB = (int)Volume/2 - 73;
-
   wm8731_SetVolumedB(DeviceAddr, voldB);
   return counter;
 }

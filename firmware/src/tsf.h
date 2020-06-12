@@ -1,5 +1,8 @@
 /* TinySoundFont - v0.8 - SoundFont2 synthesizer - https://github.com/schellingb/TinySoundFont
                                      no warranty implied; use at your own risk
+
+   NOTE: Modified version to reduce memory usage and with ARM optimization.
+
    Do this:
       #define TSF_IMPLEMENTATION
    before you include this file in *one* C or C++ file to create the implementation.

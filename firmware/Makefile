@@ -41,6 +41,12 @@ SRCS      += stm32f7xx_hal_rcc.c stm32f7xx_hal_rcc_ex.c stm32f7xx_hal.c stm32f7x
 			 usbd_storage.c \
 			 usbd_conf.c usbd_desc.c
 
+ifeq ($(SYNTH), FLUIDSYNTH)
+	SRCS      += fluid_altsfont.c fluid_conv.c fluid_mod.c fluid_sys.c riff.c \
+			 fluid_chan.c fluid_gen.c fluid_rev.c fluid_tuning.c \
+			 fluid_chorus.c fluid_list.c fluid_synth.c fluid_voice.c
+endif
+
 # Directories
 OCD_DIR    = openocd-stm32f7/tcl
 
@@ -81,6 +87,13 @@ DEFS      += -DARM_MATH_CM7
 # Debug specific definitions for semihosting
 DEFS       += -DUSE_DBPRINTF
 
+
+ifeq ($(SYNTH), FLUIDSYNTH)
+DEFS 	  += -DFLUID_NO_NAMES -DFLUID_SAMPLE_MMAP -DFLUID_NO_NRPN_EXT -DFLUID_CALC_FORMAT_FLOAT -DFLUID_BUFFER_S16 -DFLUID_FIXED_POINT 
+else
+DEFS      += -DTSF_SYNTH
+endif
+
 # Include search paths (-I)
 INCS       = -Isrc
 INCS      += -I$(HAL_DIR)
@@ -88,6 +101,7 @@ INCS      += -I$(BSP_DIR)
 INCS      += -I$(CMSIS_DIR)
 INCS      += -I$(AUDIO_DIR)
 INCS      += -I$(USB_DIR)
+INCS      += -Isrc/efluidsynth
 
 # Library search paths
 LIBS       = -L$(CMSIS_DIR)
@@ -117,6 +131,7 @@ VPATH     += $(BSP_DIR)
 VPATH     += $(HAL_DIR)
 VPATH     += $(AUDIO_DIR)
 VPATH     += $(USB_DIR)
+VPATH     += src/efluidsynth
 OBJS       = $(addprefix obj/,$(SRCS:.c=.o))
 DEPS       = $(addprefix dep/,$(SRCS:.c=.d))
 

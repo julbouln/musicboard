@@ -1,5 +1,6 @@
 #include "main.h"
 
+#ifdef TSF_SYNTH
 #define TSF_RENDER_EFFECTSAMPLEBLOCK 256
 #define TSF_NO_PRESET_NAME
 //#define TSF_NO_INTERPOLATION
@@ -14,6 +15,9 @@
 
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
+#else
+#include "efluidsynth.h"
+#endif
 
 USBD_HandleTypeDef USBD_Device;
 TIM_HandleTypeDef    TimHandle;
@@ -24,29 +28,57 @@ static void Error_Handler(void);
 static void MPU_Config(void);
 static void CPU_CACHE_Enable(void);
 
+#ifdef TSF_SYNTH
 tsf* synth = NULL;
+#else
+fluid_synth_t* synth = NULL;
+#endif
 
 uint8_t buf[AUDIO_BUF_SIZE];
 uint8_t synth_buf[AUDIO_BUF_SIZE];
 
 void synth_init() {
+#ifdef TSF_SYNTH
   synth = tsf_load_filename(NULL);
   if(synth) {
     tsf_set_max_voices(synth, POLYPHONY);
     tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
     tsf_channel_set_presetnumber(synth, 0, 0, 0);
   }
+#else
+  fluid_settings_t settings;
+  fluid_synth_settings(&settings);
+  settings.sample_rate = SAMPLE_RATE;
+  settings.reverb = 0;
+  settings.chorus = 0;
+  settings.polyphony = POLYPHONY;
+
+  synth = new_fluid_synth(&settings);
+  if(synth) {
+    fluid_synth_set_interp_method(synth, -1, FLUID_INTERP_NONE);
+    fluid_synth_sfload(synth, "font.sf2", 1);
+  }
+#endif
+
 }
 
 void synth_update(uint32_t bufpos, uint32_t bufsize) {
-  if(QSPI_ready() && synth) {
+  if(synth && QSPI_ready()) {
     QSPI_readonly_mode();
     if(QSPI_wrote_get()) {
+#ifdef TSF_SYNTH
       tsf_close(synth);
+#else
+      delete_fluid_synth(synth);
+#endif
       synth_init();
       QSPI_wrote_clear();
     }
+#ifdef TSF_SYNTH
     tsf_render_short(synth, (int16_t *)&synth_buf[bufpos], bufsize / 4, 0);
+#else
+    fluid_synth_write_s16(synth, bufsize / 4, (int16_t *)&synth_buf[bufpos], 0, 2, (int16_t *)&synth_buf[bufpos], 1, 2 );
+#endif
 
     int16_t *out = (int16_t *)&buf[0] + bufpos / 2;
     int16_t *in = (int16_t *)synth_buf + bufpos / 2;
@@ -208,8 +240,9 @@ int main(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   if(htim->Instance == TIM3) {
-    if(synth && QSPI_ready())
+    if(synth && QSPI_ready()) {
       BSP_LED_Toggle(LED1);
+    }
   }
 }
 

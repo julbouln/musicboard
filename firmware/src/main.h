@@ -60,7 +60,6 @@
 
 #include "audio_buffer.h"
 
-
 #ifdef USE_STM32746G_DISCOVERY
 #include "stm32746g_discovery.h"
 #include "stm32746g_discovery_audio.h"
@@ -72,10 +71,6 @@
 #include "musicboard_audio.h"
 #include "musicboard_qspi.h"
 #endif
-
-
-//#include "ff_gen_drv.h"
-//#include "sd_diskio.h"
 
 #include "qspi_wrapper.h"
 #include "usbd_audio.h"
