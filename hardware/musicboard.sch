@@ -1625,17 +1625,6 @@ F 3 "" H 5700 2900 50  0001 C CNN
 	1    5700 2900
 	1    0    0    -1  
 $EndComp
-$Comp
-L Connector:USB_B_Micro J1
-U 1 1 5ED878CD
-P 5050 3650
-F 0 "J1" H 5107 4117 50  0000 C CNN
-F 1 "USB_B_Micro" H 5107 4026 50  0000 C CNN
-F 2 "Connector_USB:USB_Micro-B_Molex-105017-0001" H 5200 3600 50  0001 C CNN
-F 3 "~" H 5200 3600 50  0001 C CNN
-	1    5050 3650
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	5350 3450 5700 3450
 $Comp
@@ -1757,48 +1746,48 @@ CODEC_SDA
 $Comp
 L Connector:Conn_01x02_Female J5
 U 1 1 5F05FF1E
-P 5100 4950
-F 0 "J5" H 5128 4926 50  0000 L CNN
-F 1 "Conn_01x02_Female" H 5128 4835 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 5100 4950 50  0001 C CNN
-F 3 "~" H 5100 4950 50  0001 C CNN
-	1    5100 4950
+P 5150 5300
+F 0 "J5" H 5178 5276 50  0000 L CNN
+F 1 "Conn_01x02_Female" H 5178 5185 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 5150 5300 50  0001 C CNN
+F 3 "~" H 5150 5300 50  0001 C CNN
+	1    5150 5300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	4900 5050 4700 5050
+	4950 5400 4750 5400
 Wire Wire Line
-	4900 4950 4700 4950
-Text Label 4700 5050 0    50   ~ 0
+	4950 5300 4750 5300
+Text Label 4750 5400 0    50   ~ 0
 BOOT0
-Text Label 4700 4950 0    50   ~ 0
+Text Label 4750 5300 0    50   ~ 0
 VDD
 $Comp
 L Connector:Conn_01x08_Female J7
 U 1 1 5F0B3786
-P 5100 5600
-F 0 "J7" H 5128 5576 50  0000 L CNN
-F 1 "Conn_01x04_Female" H 5128 5485 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 5100 5600 50  0001 C CNN
-F 3 "~" H 5100 5600 50  0001 C CNN
-	1    5100 5600
+P 5150 5950
+F 0 "J7" H 5178 5926 50  0000 L CNN
+F 1 "Conn_01x04_Female" H 5178 5835 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 5150 5950 50  0001 C CNN
+F 3 "~" H 5150 5950 50  0001 C CNN
+	1    5150 5950
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	4900 5300 4600 5300
+	4950 5650 4650 5650
 Wire Wire Line
-	4900 5700 4600 5700
+	4950 6050 4650 6050
 Wire Wire Line
-	4900 5600 4600 5600
+	4950 5950 4650 5950
 Wire Wire Line
-	4900 6000 4600 6000
-Text Label 4600 6000 0    50   ~ 0
+	4950 6350 4650 6350
+Text Label 4650 6350 0    50   ~ 0
 GND
-Text Label 4600 5300 0    50   ~ 0
+Text Label 4650 5650 0    50   ~ 0
 VDD
-Text Label 4600 5600 0    50   ~ 0
+Text Label 4650 5950 0    50   ~ 0
 TX2
-Text Label 4600 5700 0    50   ~ 0
+Text Label 4650 6050 0    50   ~ 0
 RX2
 $Comp
 L Connector:Conn_01x06_Female J8
@@ -2122,12 +2111,12 @@ EXT_SCL
 Text Label 4450 4450 2    50   ~ 0
 EXT_SDA
 Wire Wire Line
-	4900 5400 4600 5400
+	4950 5750 4650 5750
 Wire Wire Line
-	4900 5500 4600 5500
-Text Label 4600 5400 0    50   ~ 0
+	4950 5850 4650 5850
+Text Label 4650 5750 0    50   ~ 0
 EXT_SCL
-Text Label 4600 5500 0    50   ~ 0
+Text Label 4650 5850 0    50   ~ 0
 EXT_SDA
 Wire Wire Line
 	3800 6050 4400 6050
@@ -2138,12 +2127,12 @@ TX2
 Text Label 4400 6150 2    50   ~ 0
 RX2
 Wire Wire Line
-	4900 5900 4600 5900
+	4950 6250 4650 6250
 Wire Wire Line
-	4900 5800 4600 5800
-Text Label 4600 5800 0    50   ~ 0
+	4950 6150 4650 6150
+Text Label 4650 6150 0    50   ~ 0
 TX1
-Text Label 4600 5900 0    50   ~ 0
+Text Label 4650 6250 0    50   ~ 0
 RX1
 Wire Wire Line
 	8700 2450 8150 2450
@@ -2158,8 +2147,8 @@ L Connector:Conn_01x04_Female J9
 U 1 1 5F52F0D2
 P 7450 3800
 F 0 "J9" H 7478 3776 50  0000 L CNN
-F 1 "Conn_01x03_Female" H 7478 3685 50  0000 L CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 7450 3800 50  0001 C CNN
+F 1 "Conn_01x04_Female" H 7478 3685 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 7450 3800 50  0001 C CNN
 F 3 "~" H 7450 3800 50  0001 C CNN
 	1    7450 3800
 	1    0    0    -1  
@@ -2180,4 +2169,38 @@ Wire Wire Line
 	7250 3700 6950 3700
 Text Label 6950 3700 0    50   ~ 0
 VDDA
+$Comp
+L Connector:USB_B_Mini J1
+U 1 1 5EEAA8F5
+P 5050 3650
+F 0 "J1" H 5107 4117 50  0000 C CNN
+F 1 "USB_B_Mini" H 5107 4026 50  0000 C CNN
+F 2 "hardware:USB-mini-B-0548190519" H 5200 3600 50  0001 C CNN
+F 3 "~" H 5200 3600 50  0001 C CNN
+	1    5050 3650
+	1    0    0    -1  
+$EndComp
+$Comp
+L Connector:Conn_01x02_Female J?
+U 1 1 5EEB19CC
+P 5100 4850
+F 0 "J?" H 5128 4826 50  0000 L CNN
+F 1 "Conn_01x02_Female" H 5128 4735 50  0000 L CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 5100 4850 50  0001 C CNN
+F 3 "~" H 5100 4850 50  0001 C CNN
+	1    5100 4850
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	4900 4850 4700 4850
+Wire Wire Line
+	4900 4950 4700 4950
+Text Label 5500 3650 0    50   ~ 0
+DP
+Text Label 5500 3750 0    50   ~ 0
+DM
+Text Label 4700 4850 0    50   ~ 0
+DP
+Text Label 4700 4950 0    50   ~ 0
+DM
 $EndSCHEMATC
