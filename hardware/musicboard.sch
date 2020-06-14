@@ -2181,10 +2181,10 @@ F 3 "~" H 5200 3600 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector:Conn_01x02_Female J?
+L Connector:Conn_01x02_Female J10
 U 1 1 5EEB19CC
 P 5100 4850
-F 0 "J?" H 5128 4826 50  0000 L CNN
+F 0 "J10" H 5128 4826 50  0000 L CNN
 F 1 "Conn_01x02_Female" H 5128 4735 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 5100 4850 50  0001 C CNN
 F 3 "~" H 5100 4850 50  0001 C CNN
