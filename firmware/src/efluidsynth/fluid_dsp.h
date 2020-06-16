@@ -33,7 +33,7 @@ static int32_t __SSAT(int32_t x, int32_t y)
 #ifdef FLUID_FIXED_POINT
 	typedef int32_t fluid_buf_t; // q31_t / q17.15
 	typedef int16_t fluid_buf16_t; // q15_t / q1.15
-	#define FLUID_BUF_SAT(v) (int32_t) __SSAT(v,15)
+	#define FLUID_BUF_SAT(v) (int32_t) __SSAT(v,16)
 	#define FLUID_BUF_SAT32(v) (int32_t) __SSAT(v,30)
 	#define FLUID_BUF_FLOAT(v) (FLUID_BUF_SAT((v >> 15))/32768.0f)
 	#define FLUID_BUF_S16(v) (v >> 15)

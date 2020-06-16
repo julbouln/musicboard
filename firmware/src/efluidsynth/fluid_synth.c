@@ -289,13 +289,9 @@ new_fluid_synth(fluid_settings_t *settings)
   synth->settings = settings;
 
   synth->with_reverb = settings->reverb;
-  //fluid_settings_str_equal(settings, "synth.reverb.active", "yes");
   synth->with_chorus = settings->chorus;
-  // fluid_settings_str_equal(settings, "synth.chorus.active", "yes");
   synth->verbose = settings->verbose;
-  //fluid_settings_str_equal(settings, "synth.verbose", "yes");
   synth->dump = settings->dump;
-  //fluid_settings_str_equal(settings, "synth.dump", "yes");
   synth->polyphony = settings->polyphony;
   synth->sample_rate = settings->sample_rate;
   synth->midi_channels = settings->midi_channels;
@@ -303,39 +299,6 @@ new_fluid_synth(fluid_settings_t *settings)
   synth->audio_groups = settings->audio_groups;
   synth->effects_channels = settings->effects_channels;
   synth->gain = settings->gain;
-
-  /*
-    fluid_settings_getint(settings, "synth.polyphony", &synth->polyphony);
-    fluid_settings_getnum(settings, "synth.sample-rate", &synth->sample_rate);
-    fluid_settings_getint(settings, "synth.midi-channels", &synth->midi_channels);
-    fluid_settings_getint(settings, "synth.audio-channels", &synth->audio_channels);
-    fluid_settings_getint(settings, "synth.audio-groups", &synth->audio_groups);
-    fluid_settings_getint(settings, "synth.effects-channels", &synth->effects_channels);
-    fluid_settings_getnum(settings, "synth.gain", &synth->gain);
-  */
-  /* register the callbacks */
-  /*
-    fluid_settings_register_num(settings, "synth.gain",
-              0.2f, 0.0f, 10.0f, 0,
-              (fluid_num_update_t) fluid_synth_update_gain, synth);
-
-    fluid_settings_register_int(settings, "synth.polyphony",
-              synth->polyphony, 16, 4096, 0,
-              (fluid_int_update_t) fluid_synth_update_polyphony,
-                                synth);
-  */
-//  printf("POLYPHONY %d %d\n",synth->polyphony,synth->with_reverb);
-
-  /* do some basic sanity checking on the settings */
-  /*
-    if (synth->midi_channels % 16 != 0) {
-      int n = synth->midi_channels / 16;
-      synth->midi_channels = (n + 1) * 16;
-      fluid_settings_setint(settings, "synth.midi-channels", synth->midi_channels);
-      FLUID_LOG(FLUID_WARN, "Requested number of MIDI channels is not a multiple of 16. "
-         "I'll increase the number of channels to the next multiple.");
-    }
-  */
 
   if (synth->audio_channels < 1) {
     FLUID_LOG(FLUID_WARN, "Requested number of audio channels is smaller than 1. "

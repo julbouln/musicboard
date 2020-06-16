@@ -385,114 +385,6 @@ void fluid_revmodel_processmix(fluid_revmodel_t* rev, fluid_buf_t *in,
   int i, k = 0;
   fluid_buf_t outL, outR, input;
 
-#if 0
-  fluid_buf_t in0,in1,in2,in3;
-  fluid_buf_t outL0,outL1,outL2,outL3;
-  fluid_buf_t outR0,outR1,outR2,outR3;
-
-  uint32_t dsp_cnt;
-
-  dsp_cnt = FLUID_BUFSIZE >> 2;
-
-  while(dsp_cnt > 0) {
-
-    outL0 = outL1 = outL2 = outL3 = 0;
-    outR0 = outR1 = outR2 = outR3 = 0;
-
-    in0 = FLUID_BUF_MULT(2*rev->gain, *(in++) ) + DC_OFFSET;
-    in1 = FLUID_BUF_MULT(2*rev->gain, *(in++) ) + DC_OFFSET;
-    in2 = FLUID_BUF_MULT(2*rev->gain, *(in++) ) + DC_OFFSET;
-    in3 = FLUID_BUF_MULT(2*rev->gain, *(in++) ) + DC_OFFSET;
-
-
-    /* Accumulate comb filters in parallel */
-    for (i = 0; i < NUMCOMBS; i++) {
-      fluid_comb_process(rev->combL[i], in0, outL0);
-      fluid_comb_process(rev->combR[i], in0, outR0);
-    }
-    for (i = 0; i < NUMCOMBS; i++) {
-      fluid_comb_process(rev->combL[i], in1, outL1);
-      fluid_comb_process(rev->combR[i], in1, outR1);
-    }
-    for (i = 0; i < NUMCOMBS; i++) {
-      fluid_comb_process(rev->combL[i], in2, outL2);
-      fluid_comb_process(rev->combR[i], in2, outR2);
-    }
-    for (i = 0; i < NUMCOMBS; i++) {
-      fluid_comb_process(rev->combL[i], in3, outL3);
-      fluid_comb_process(rev->combR[i], in3, outR3);
-    }
-
-    /* Feed through allpasses in series */
-//    for (i = 0; i < NUMALLPASSES; i++) {
-    i=0;
-      fluid_allpass_process(rev->allpassL[i], outL0);
-      fluid_allpass_process(rev->allpassR[i], outR0);
-      fluid_allpass_process(rev->allpassL[i+1], outL0);
-      fluid_allpass_process(rev->allpassR[i+1], outR0);
-      fluid_allpass_process(rev->allpassL[i+2], outL0);
-      fluid_allpass_process(rev->allpassR[i+2], outR0);
-      fluid_allpass_process(rev->allpassL[i+3], outL0);
-      fluid_allpass_process(rev->allpassR[i+3], outR0);
-
-      fluid_allpass_process(rev->allpassL[i], outL1);
-      fluid_allpass_process(rev->allpassR[i], outR1);
-      fluid_allpass_process(rev->allpassL[i+1], outL1);
-      fluid_allpass_process(rev->allpassR[i+1], outR1);
-      fluid_allpass_process(rev->allpassL[i+2], outL1);
-      fluid_allpass_process(rev->allpassR[i+2], outR1);
-      fluid_allpass_process(rev->allpassL[i+3], outL1);
-      fluid_allpass_process(rev->allpassR[i+3], outR1);
-
-      fluid_allpass_process(rev->allpassL[i], outL2);
-      fluid_allpass_process(rev->allpassR[i], outR2);
-      fluid_allpass_process(rev->allpassL[i+1], outL2);
-      fluid_allpass_process(rev->allpassR[i+1], outR2);
-      fluid_allpass_process(rev->allpassL[i+2], outL2);
-      fluid_allpass_process(rev->allpassR[i+2], outR2);
-      fluid_allpass_process(rev->allpassL[i+3], outL2);
-      fluid_allpass_process(rev->allpassR[i+3], outR2);
-
-      fluid_allpass_process(rev->allpassL[i], outL3);
-      fluid_allpass_process(rev->allpassR[i], outR3);
-      fluid_allpass_process(rev->allpassL[i+1], outL3);
-      fluid_allpass_process(rev->allpassR[i+1], outR3);
-      fluid_allpass_process(rev->allpassL[i+2], outL3);
-      fluid_allpass_process(rev->allpassR[i+2], outR3);
-      fluid_allpass_process(rev->allpassL[i+3], outL3);
-      fluid_allpass_process(rev->allpassR[i+3], outR3);
-//    }
-
-/* Remove the DC offset */
-    outL0 -= DC_OFFSET;
-    outR0 -= DC_OFFSET;
-
-    outL1 -= DC_OFFSET;
-    outR1 -= DC_OFFSET;
-
-    outL2 -= DC_OFFSET;
-    outR2 -= DC_OFFSET;
-
-    outL3 -= DC_OFFSET;
-    outR3 -= DC_OFFSET;
-
-    /* Calculate output MIXING with anything already there */
-    *(left_out++) += FLUID_BUF_MULT32(rev->wet1,outL0) + FLUID_BUF_MULT32(rev->wet2,outR0);
-    *(right_out++) += FLUID_BUF_MULT32(rev->wet1,outR0) + FLUID_BUF_MULT32(rev->wet2,outL0);
-
-    *(left_out++) += FLUID_BUF_MULT32(rev->wet1,outL1) + FLUID_BUF_MULT32(rev->wet2,outR1);
-    *(right_out++) += FLUID_BUF_MULT32(rev->wet1,outR1) + FLUID_BUF_MULT32(rev->wet2,outL1);
-
-    *(left_out++) += FLUID_BUF_MULT32(rev->wet1,outL2) + FLUID_BUF_MULT32(rev->wet2,outR2);
-    *(right_out++) += FLUID_BUF_MULT32(rev->wet1,outR2) + FLUID_BUF_MULT32(rev->wet2,outL2);
-
-    *(left_out++) += FLUID_BUF_MULT32(rev->wet1,outL3) + FLUID_BUF_MULT32(rev->wet2,outR3);
-    *(right_out++) += FLUID_BUF_MULT32(rev->wet1,outR3) + FLUID_BUF_MULT32(rev->wet2,outL3);
-
-    dsp_cnt--;
-  } // 3 * 64 + 36 * 64 = 2496 loop penalty (12.48us@200mhz)
-#endif
-#if 1
   for (k = 0; k < FLUID_BUFSIZE; k++) {
     outL = outR = 0;
 
@@ -523,7 +415,6 @@ void fluid_revmodel_processmix(fluid_revmodel_t* rev, fluid_buf_t *in,
     *(right_out++) += FLUID_BUF_MULT32(rev->wet1,outR) + FLUID_BUF_MULT32(rev->wet2,outL);
 
   } // 256 * 3 + 256 * 36 = 9984 loop cost (49.92us@200mhz)
-  #endif
 }
 
 void fluid_revmodel_update(fluid_revmodel_t* rev)

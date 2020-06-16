@@ -681,7 +681,8 @@ P 10500 5850
 F 0 "J3" H 10220 5875 50  0000 R CNN
 F 1 "AudioJack3" H 10220 5784 50  0000 R CNN
 F 2 "Connector_Audio:Jack_3.5mm_CUI_SJ1-3535NG_Horizontal" H 10500 5850 50  0001 C CNN
-F 3 "~" H 10500 5850 50  0001 C CNN
+F 3 "https://www.cuidevices.com/product/resource/sj1-353xng.pdf" H 10500 5850 50  0001 C CNN
+F 4 "http://www.switchcraft.com/Drawings/35rapc__v4_cd.pdf" H 10500 5850 50  0001 C CNN "Alt"
 	1    10500 5850
 	-1   0    0    -1  
 $EndComp
@@ -692,7 +693,8 @@ P 10500 5400
 F 0 "J2" H 10220 5425 50  0000 R CNN
 F 1 "AudioJack3" H 10220 5334 50  0000 R CNN
 F 2 "Connector_Audio:Jack_3.5mm_CUI_SJ1-3535NG_Horizontal" H 10500 5400 50  0001 C CNN
-F 3 "~" H 10500 5400 50  0001 C CNN
+F 3 "https://www.cuidevices.com/product/resource/sj1-353xng.pdf" H 10500 5400 50  0001 C CNN
+F 4 "http://www.switchcraft.com/Drawings/35rapc__v4_cd.pdf" H 10500 5400 50  0001 C CNN "Alt"
 	1    10500 5400
 	-1   0    0    -1  
 $EndComp
@@ -1337,7 +1339,8 @@ P 10500 4900
 F 0 "J4" H 10220 4925 50  0000 R CNN
 F 1 "AudioJack3" H 10220 4834 50  0000 R CNN
 F 2 "Connector_Audio:Jack_3.5mm_CUI_SJ1-3535NG_Horizontal" H 10500 4900 50  0001 C CNN
-F 3 "~" H 10500 4900 50  0001 C CNN
+F 3 "https://www.cuidevices.com/product/resource/sj1-353xng.pdf" H 10500 4900 50  0001 C CNN
+F 4 "http://www.switchcraft.com/Drawings/35rapc__v4_cd.pdf" H 10500 4900 50  0001 C CNN "Alt"
 	1    10500 4900
 	-1   0    0    -1  
 $EndComp
@@ -1485,6 +1488,7 @@ F 0 "U2" H 5550 7292 50  0000 C CNN
 F 1 "MCP1825S" H 5550 7201 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 5450 7200 50  0001 C CNN
 F 3 "http://ww1.microchip.com/downloads/en/devicedoc/22056b.pdf" H 5550 7300 50  0001 C CNN
+F 4 "http://ww1.microchip.com/downloads/en/DeviceDoc/21373C.pdf" H 5550 7050 50  0001 C CNN "Alt"
 	1    5550 7050
 	1    0    0    -1  
 $EndComp
