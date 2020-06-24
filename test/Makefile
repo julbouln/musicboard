@@ -13,6 +13,13 @@ mid2wav_efluidsynth:
 	../firmware/src/efluidsynth/fluid_voice.c \
 	mid2wav_efluidsynth.c -o mid2wav_efluidsynth $^ -lc -lm -lsndfile
 
+callgrind: mid2wav_tsf
+	valgrind --dsymutil=yes --tool=callgrind --dump-instr=yes --collect-jumps=yes ./mid2wav_tsf war2.mid merlin.sf2 test.wav
+
+massif: mid2wav_tsf
+	valgrind --tool=massif  --heap-admin=1 --depth=50 --peak-inaccuracy=0.0 --detailed-freq=1 --threshold=0.0 --time-unit=B --massif-out-file=massif.out ./mid2wav_tsf war2.mid merlin.sf2 test.wav
+	ms_print massif.out > massif.log
+
 clean:
 	rm -f mid2wav_tsf
 	rm -f mid2wav_efluidsynth

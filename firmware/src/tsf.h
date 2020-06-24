@@ -238,11 +238,48 @@ TSFDEF float tsf_channel_get_tuning(tsf* f, int32_t channel);
 // execute GC every TSF_GC_F render
 #define TSF_GC_F 1024
 
+//#define TSF_MEM_PROF // quick and dirty memory profile
+
+#ifdef TSF_MEM_PROF
+#include <stdlib.h>
+uint64_t cur_mem = 0;
+uint64_t max_mem = 0;
+
+void *prof_malloc(uint64_t size) {
+	cur_mem += size;
+	if(cur_mem > max_mem)
+		max_mem = cur_mem;
+	printf("MALLOC %ld/%ld\n",cur_mem,max_mem);
+	return malloc(size);
+}
+
+void *prof_realloc(void *ptr, uint64_t size) {
+	if(ptr)
+		cur_mem -= malloc_usable_size(ptr);
+	cur_mem += size;
+	if(cur_mem > max_mem)
+		max_mem = cur_mem;
+	printf("REALLOC %ld/%ld\n",cur_mem, max_mem);
+	return realloc(ptr, size);
+}
+
+void prof_free(void *ptr) {
+	cur_mem -= malloc_usable_size(ptr);
+	printf("FREE %ld/%ld\n",cur_mem,max_mem);
+}
+#endif
+
 #if !defined(TSF_MALLOC) || !defined(TSF_FREE) || !defined(TSF_REALLOC)
 #include <stdlib.h>
+#ifdef TSF_MEM_PROF
+#define TSF_MALLOC  prof_malloc
+#define TSF_FREE    prof_free
+#define TSF_REALLOC prof_realloc
+#else
 #define TSF_MALLOC  malloc
 #define TSF_FREE    free
 #define TSF_REALLOC realloc
+#endif
 #endif
 
 #if !defined(TSF_MEMCPY) || !defined(TSF_MEMSET)
@@ -337,6 +374,10 @@ static inline int32_t __SMLABB(int32_t x, int32_t y, int32_t z) {
 #define float_to_fixed64(v) (uint64_t)((v) * 4294967296.0f)
 #define fixed64_to_float(v) (float)((v) / 4294967296.0f)
 
+#ifndef TSF_NO_REVERB
+#include "reverb.h"
+#endif
+
 typedef char tsf_fourcc[4];
 typedef int8_t tsf_s8;
 typedef uint8_t tsf_u8;
@@ -374,7 +415,10 @@ struct tsf
 	float outSampleRate;
 	float globalGainDB;
 
-	uint32_t gc;
+	uint16_t gc;
+#ifndef TSF_NO_REVERB
+	reverb_t rev_l, rev_r;
+#endif
 };
 
 #ifndef TSF_NO_STDIO
@@ -492,6 +536,7 @@ struct tsf_channel
 {
 	uint16_t presetIndex, bank, pitchWheel, midiPan, midiVolume, midiExpression, midiRPN, midiData;
 	float panOffset, gainDB, pitchRange, tuning;
+	int16_t buffer[TSF_RENDER_EFFECTSAMPLEBLOCK];
 };
 
 struct tsf_channels
@@ -886,7 +931,9 @@ static void tsf_load_preset(tsf* res, int32_t idx)
 	stream->seek(stream->data, hydra->phdrPos + (preset->pphdrIdx + 1) * phdrSizeInFile);
 	tsf_hydra_read_phdr(&nextpphdr, stream);
 
-	//printf("MALLOC struct tsf_region %d * %ld = %ld\n", preset->regionNum, sizeof(struct tsf_region), preset->regionNum * sizeof(struct tsf_region));
+#ifdef TSF_MEM_PROF
+	printf("MALLOC struct tsf_region (%d) %d * %ld = %ld\n", idx, preset->regionNum, sizeof(struct tsf_region), preset->regionNum * sizeof(struct tsf_region));
+#endif
 	preset->regions = (struct tsf_region*)TSF_MALLOC(preset->regionNum * sizeof(struct tsf_region));
 	tsf_region_clear(&globalRegion, TSF_TRUE);
 
@@ -1288,15 +1335,15 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 		int32_t blockSamples = (numSamples > TSF_RENDER_EFFECTSAMPLEBLOCK ? TSF_RENDER_EFFECTSAMPLEBLOCK : numSamples);
 		numSamples -= blockSamples;
 
+#ifndef TSF_NO_LOWPASS
 		if (dynamicLowpass)
 		{
 			float fres = tmpInitialFilterFc + v->modlfo.level * tmpModLfoToFilterFc + v->modenv.level * tmpModEnvToFilterFc;
 			float lowpassFc = (fres <= 13500 ? tsf_cents2Hertz(fres) / tmpSampleRate : 1.0f);
 			tmpLowpass.active = (lowpassFc < 0.499f);
-#ifndef TSF_NO_LOWPASS
 			if (tmpLowpass.active) tsf_voice_lowpass_setup(&tmpLowpass, lowpassFc);
-#endif
 		}
+#endif
 
 		if (dynamicPitchRatio)
 			pitchRatio = tsf_timecents2Secsf(v->pitchInputTimecents + (v->modlfo.level * tmpModLfoToPitch + v->viblfo.level * tmpVibLfoToPitch + v->modenv.level * tmpModEnvToPitch)) * v->pitchOutputFactor;
@@ -1379,6 +1426,9 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			}
 		}
 #endif
+		struct tsf_channel* c = &f->channels->channels[v->playingChannel];
+
+		int16_t *chan_output = c->buffer;
 		buf = samplesBuf;
 		blkCnt = (blockSamples - blckRemain) >> 1;
 		while (blkCnt--)
@@ -1404,7 +1454,6 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			*output++ = __SSAT(out3 >> 15, 16);
 		}
 
-
 		if (tmpSourceSamplePosition >= tmpSampleEndDbl || v->ampenv.segment == TSF_SEGMENT_DONE)
 		{
 			tsf_voice_kill(v);
@@ -1415,6 +1464,38 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 	v->sourceSamplePosition = tmpSourceSamplePosition;
 	if (tmpLowpass.active || dynamicLowpass) v->lowpass = tmpLowpass;
 }
+
+#ifndef TSF_NO_REVERB
+/* 
+Colour is a "tilt" EQ similar to that used on old Quad amps, rolling off the treble when turned down and bass when turned up 
+Size adjusts the size of the "room", and to an extent its shape. 
+Decay adjusts the feedback trim through the comb filters.
+*/
+TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
+	if(colour < -6.0f)
+		colour = -6.0f;
+	if(colour > 6.0f)
+		colour = 6.0f;
+	if(size < 0.1f)
+		size = 0.1f;
+	if(size > 1.0f)
+		size = 1.0f;
+
+	if(decay < 0.0f)
+		decay = 0.0f;
+	if(decay > 0.95f)
+		decay = 0.95f;
+
+	reverb_set_colour(&f->rev_l, colour);
+	reverb_set_size(&f->rev_l, size);
+	reverb_set_decay(&f->rev_l, decay);
+
+	reverb_init(&f->rev_r);
+	reverb_set_colour(&f->rev_r, colour);
+	reverb_set_size(&f->rev_r, size);
+	reverb_set_decay(&f->rev_r, decay);
+}
+#endif
 
 TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 {
@@ -1480,11 +1561,9 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 //	}
 	else
 	{
-//		printf("MALLOC tsf %ld\n", sizeof(tsf));
 		res = (tsf*)TSF_MALLOC(sizeof(tsf));
 		TSF_MEMSET(res, 0, sizeof(tsf));
 		res->presetNum = hydra.phdrNum - 1;
-//		printf("MALLOC struct tsf_preset %d * %ld = %ld\n", res->presetNum, sizeof(struct tsf_preset), res->presetNum * sizeof(struct tsf_preset));
 		res->presets = (struct tsf_preset*)TSF_MALLOC(res->presetNum * sizeof(struct tsf_preset));
 		res->fontSamples = fontSamples;
 		res->fontSamplesOffset = offset / sizeof(int16_t);
@@ -1492,6 +1571,9 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->outSampleRate = 44100.0f;
 		res->voicesMax = 128;
 		
+		#ifdef TSF_MEM_PROF
+			printf("MALLOC struct tsf_voice %ld * %ld = %ld\n", res->voicesMax,sizeof(struct tsf_voice),res->voicesMax * sizeof(struct tsf_voice));
+		#endif
 		res->voices = (struct tsf_voice *)TSF_MALLOC(res->voicesMax * sizeof(struct tsf_voice));
 		for(int i = 0;i < res->voicesMax;i++)
 			res->voices[i].playingPreset = -1;
@@ -1500,6 +1582,14 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->stream = stream;
 		res->hydra = hydra;
 		res->gc = 0;
+
+		#ifndef TSF_NO_REVERB
+			reverb_init(&res->rev_l);
+			reverb_init(&res->rev_r);
+
+			tsf_reverb_setup(res, 0.0f, 0.1f, 0.0f);
+		#endif
+
 		tsf_preload_presets(res);
 	}
 	return res;
@@ -1507,6 +1597,9 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 
 TSFDEF void tsf_set_max_voices(tsf* f, int max) {
 	f->voicesMax = max;
+	#ifdef TSF_MEM_PROF
+		printf("REALLOC struct tsf_voice %ld * %ld = %ld\n", f->voicesMax,sizeof(struct tsf_voice),f->voicesMax * sizeof(struct tsf_voice));
+	#endif
 	f->voices = (struct tsf_voice *)TSF_REALLOC(f->voices, f->voicesMax * sizeof(struct tsf_voice));
 	for(int i = 0;i < f->voicesMax;i++)
 		f->voices[i].playingPreset = -1;
@@ -1593,6 +1686,7 @@ static struct tsf_voice *tsf_reusable_voice(tsf * f, float cap) {
 		return TSF_NULL;
 }
 
+
 TSFDEF void tsf_note_on(tsf* f, int32_t preset_index, int32_t key, float vel)
 {	
 	int16_t midiVelocity = (int16_t)(vel * 127);
@@ -1658,13 +1752,13 @@ TSFDEF void tsf_note_on(tsf* f, int32_t preset_index, int32_t key, float vel)
 			tsf_voice_envelope_setup(&voice->ampenv, &region->ampenv, key, midiVelocity, TSF_TRUE, f->outSampleRate);
 			tsf_voice_envelope_setup(&voice->modenv, &region->modenv, key, midiVelocity, TSF_FALSE, f->outSampleRate);
 
+#ifndef TSF_NO_LOWPASS
 			// Setup lowpass filter.
 			lowpassFc = (region->initialFilterFc <= 13500 ? tsf_cents2Hertz((float)region->initialFilterFc) / f->outSampleRate : 1.0f);
 			lowpassFilterQDB = region->initialFilterQ / 10.0f;
 			voice->lowpass.QInv = 1.0 / TSF_POWF(10.0, (lowpassFilterQDB / 20.0));
 			voice->lowpass.z1 = voice->lowpass.z2 = 0;
 			voice->lowpass.active = (lowpassFc < 0.499f);
-#ifndef TSF_NO_LOWPASS
 			if (voice->lowpass.active) tsf_voice_lowpass_setup(&voice->lowpass, lowpassFc);
 #endif
 			// Setup LFO filters.
@@ -1757,12 +1851,18 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 	tsf_gc(f);
 	struct tsf_voice *v = f->voices, *vEnd = v + f->voiceNum;
 	if (!flag_mixing) TSF_MEMSET(buffer, 0, (f->outputmode == TSF_MONO ? 1 : 2) * sizeof(int16_t) * samples);
-	for (; v != vEnd; v++)
+	for (; v != vEnd; v++) {
 		if (v->playingPreset != -1 && v->locked == 0) {
 			v->locked = 1;
 			tsf_voice_render(f, v, buffer, samples);
 			v->locked = 0;
 		}
+	}
+
+	#ifndef TSF_NO_REVERB
+		reverb_process(&f->rev_l, buffer, buffer, samples*2, 0, 2);
+		reverb_process(&f->rev_r, buffer, buffer, samples*2, 1, 2);
+	#endif
 }
 
 static void tsf_channel_setup_voice(tsf* f, struct tsf_voice* v)
@@ -1783,7 +1883,9 @@ static struct tsf_channel* tsf_channel_init(tsf* f, int32_t channel)
 	if (f->channels && channel < f->channels->channelNum) return &f->channels->channels[channel];
 	if (!f->channels)
 	{
-//		printf("MALLOC struct tsf_channels %ld\n", sizeof(struct tsf_channels));
+#ifdef TSF_MEM_PROF
+		printf("MALLOC struct tsf_channels %ld\n", sizeof(struct tsf_channels));
+#endif
 		f->channels = (struct tsf_channels*)TSF_MALLOC(sizeof(struct tsf_channels));
 		f->channels->setupVoice = &tsf_channel_setup_voice;
 		f->channels->channels = NULL;
@@ -1793,7 +1895,9 @@ static struct tsf_channel* tsf_channel_init(tsf* f, int32_t channel)
 	i = f->channels->channelNum;
 	f->channels->channelNum = channel + 1;
 
-//	printf("REALLOC struct tsf_channel %d * %ld = %ld\n", f->channels->channelNum, sizeof(struct tsf_channel), f->channels->channelNum * sizeof(struct tsf_channel));
+#ifdef TSF_MEM_PROF
+	printf("REALLOC struct tsf_channel %d * %ld = %ld\n", f->channels->channelNum, sizeof(struct tsf_channel), f->channels->channelNum * sizeof(struct tsf_channel));
+#endif
 	f->channels->channels = (struct tsf_channel*)TSF_REALLOC(f->channels->channels, f->channels->channelNum * sizeof(struct tsf_channel));
 	for (; i <= channel; i++)
 	{
@@ -1986,6 +2090,9 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		tsf_channel_set_pan(f, channel, 0.5f);
 		tsf_channel_set_pitchrange(f, channel, 2.0f);
 		return;
+//	case 91: /* reverb */ return;
+//	case 93: /* chorus */ return;
+//	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

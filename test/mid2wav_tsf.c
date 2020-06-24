@@ -2,6 +2,7 @@
 #define TSF_NO_PRESET_NAME
 //#define TSF_NO_INTERPOLATION
 //#define TSF_NO_LOWPASS
+//#define TSF_NO_REVERB
 
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
@@ -11,7 +12,7 @@
 
 #include <sndfile.h>
 
-#define	BUFFER_LEN 2048
+#define	BUFFER_LEN 1024
 #define SAMPLE_RATE 44100
 
 int main(int argc, char** argv)
@@ -32,12 +33,13 @@ int main(int argc, char** argv)
 	}
 
 	tsf* synth = tsf_load_filename(argv[2]);
-	if(!synth) {
+	if (!synth) {
 		fprintf(stderr, "Could not create synth\n");
 		return 1;
 	}
 	tsf_set_max_voices(synth, 64);
 	tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
+	tsf_reverb_setup(synth, 0.0f, 0.8f, 0.8f);
 
 	SNDFILE	*outfile;
 	SF_INFO		sfinfo;
@@ -50,6 +52,8 @@ int main(int argc, char** argv)
 		puts (sf_strerror (NULL)) ;
 		return 1 ;
 	} ;
+
+	short buf[BUFFER_LEN];
 
 	while (tml && tml->next) {
 		for (msec += (float)BUFFER_LEN / 2.0 * (1000.0 / SAMPLE_RATE); tml && msec >= tml->time; tml = tml->next)
@@ -72,14 +76,15 @@ int main(int argc, char** argv)
 			case TML_CONTROL_CHANGE: //MIDI controller messages
 				tsf_channel_midi_control(synth, tml->channel, tml->control, tml->control_value);
 				break;
+			default:
+				printf("UNSUPPORTED TYPE %d\n", tml->type);
+				break;
 			}
 		}
 
-		short buf[BUFFER_LEN];
-		tsf_render_short(synth, buf, BUFFER_LEN/2, 0);
-		int n = sf_write_short(outfile, buf, BUFFER_LEN);
+		tsf_render_short(synth, buf, BUFFER_LEN / 2, 0);
 
-		tsf_gc(synth);
+		int n = sf_write_short(outfile, buf, BUFFER_LEN);
 	}
 	sf_close(outfile);
 
