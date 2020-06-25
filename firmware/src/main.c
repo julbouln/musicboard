@@ -6,6 +6,7 @@
 //#define TSF_NO_INTERPOLATION
 //#define TSF_NO_LOWPASS
 #define TSF_NO_REVERB
+#define TSF_NO_CHORUS
 
 #define TSF_FILE QSPI_FILE
 #define TSF_MMAP(p,s,f) QSPI_mmap(0,s,f)

@@ -1,8 +1,9 @@
-#define TSF_RENDER_EFFECTSAMPLEBLOCK 256
+#define TSF_RENDER_EFFECTSAMPLEBLOCK 64
 #define TSF_NO_PRESET_NAME
 //#define TSF_NO_INTERPOLATION
 //#define TSF_NO_LOWPASS
 //#define TSF_NO_REVERB
+//#define TSF_NO_CHORUS
 
 #define TSF_IMPLEMENTATION
 #include "tsf.h"
@@ -14,6 +15,8 @@
 
 #define	BUFFER_LEN 1024
 #define SAMPLE_RATE 44100
+
+#include "chorus.h"
 
 int main(int argc, char** argv)
 {
@@ -39,7 +42,10 @@ int main(int argc, char** argv)
 	}
 	tsf_set_max_voices(synth, 64);
 	tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
-	tsf_reverb_setup(synth, 0.0f, 0.8f, 0.8f);
+	#ifndef TSF_NO_REVERB
+	//printf("sizeof(reverb_t) = %ld\n",sizeof(reverb_t));
+	tsf_reverb_setup(synth, 0.0f, 0.7f, 0.7f);
+	#endif
 
 	SNDFILE	*outfile;
 	SF_INFO		sfinfo;
@@ -77,7 +83,7 @@ int main(int argc, char** argv)
 				tsf_channel_midi_control(synth, tml->channel, tml->control, tml->control_value);
 				break;
 			default:
-				printf("UNSUPPORTED TYPE %d\n", tml->type);
+				//printf("UNSUPPORTED TML TYPE %d\n", tml->type);
 				break;
 			}
 		}

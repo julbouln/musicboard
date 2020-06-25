@@ -2,7 +2,23 @@
 #define REVERB_H
 /* Reverb adapted from https://github.com/gordonjcp/reverb */
 
-#define LOW_QUALITY // reduce memory requirement
+/*
+Copyright (c) 2015 Gordon JC Pearce <gordonjcp@gjcp.net>
+
+Permission to use, copy, modify, and/or distribute this software for any purpose
+with or without fee is hereby granted, provided that the above copyright notice
+and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
+THIS SOFTWARE.
+*/
+
+//#define LOW_QUALITY // reduce memory requirement
 
 /* note that buffers need to be a power of 2 */
 /* if we scale the tap sizes for higher sample rates, this will need to be larger */
@@ -103,7 +119,7 @@ void reverb_set_decay(reverb_t *rev, float decay) {
 
     rev->ap_gain = (int16_t)(decay * -0.3535 * 32768.0f);
 
-    rev->d1 = (int16_t)(rev->decay * 0.3535 * 32768.0f);
+    rev->d1 = (int16_t)(decay * 0.3535 * 32768.0f);
     rev->d2 = (int16_t)(0.35 * 32768.0f);
 }
 
@@ -159,27 +175,27 @@ void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int sampl
         for (c = 0; c < NUM_COMBS; c++) {
 #ifdef LOW_QUALITY
             int32_t v = (int32_t)rev->comb[c][comb_pos] << 8;
-            rev->comb[c][(comb_pos + rev->tap[c]) & COMB_MASK] = __SSAT((in_s1 + (int32_t)rev->comp_gain[c] * v) >> 15, 16) >> 8;
+            rev->comb[c][(comb_pos + rev->tap[c]) & COMB_MASK] = __SSAT((in_s1 + (int32_t)rev->comp_gain[c] * v) >> 23, 8);
 #else
             int32_t v = (int32_t)rev->comb[c][comb_pos];
             rev->comb[c][(comb_pos + rev->tap[c]) & COMB_MASK] = __SSAT((in_s1 + (int32_t)rev->comp_gain[c] * v) >> 15, 16);
 #endif
-            temp += v;
+            temp = __SSAT(temp + v, 16);
         }
 
         /* loop around the allpass filters */
         for (c = 0; c < NUM_APS; c++) {
 #ifdef LOW_QUALITY
             int32_t v = (int32_t)rev->ap[c][ap_pos] << 8;
-            rev->ap[c][(ap_pos + rev->ap_tap[c]) & AP_MASK] = __SSAT(((temp << 15) + ((int32_t)rev->ap_gain * (int32_t)v)) >> 15, 16) >> 8;
+            rev->ap[c][(ap_pos + rev->ap_tap[c]) & AP_MASK] = __SSAT(((temp << 15) + ((int32_t)rev->ap_gain * (int32_t)v)) >> 23, 8);
 #else
             int32_t v = (int32_t)rev->ap[c][ap_pos];
             rev->ap[c][(ap_pos + rev->ap_tap[c]) & AP_MASK] = __SSAT(((temp << 15) + ((int32_t)rev->ap_gain * (int32_t)v)) >> 15, 16);
 #endif
-            temp = ((rev->d1 * temp) >> 15) + v;
+            temp = __SSAT((((int32_t)rev->d1 * temp) >> 15) + v, 16);
         }
 
-        output[pos] = __SSAT(in_s + ((rev->d2 * temp) >> 15), 16);
+        output[pos] = __SSAT((((int32_t)rev->d2 * temp) >> 15) + input[pos] * 2/3, 16);
         comb_pos++;
         comb_pos &= COMB_MASK; /* increment and wrap buffer */
         ap_pos++;

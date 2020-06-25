@@ -238,7 +238,7 @@ TSFDEF float tsf_channel_get_tuning(tsf* f, int32_t channel);
 // execute GC every TSF_GC_F render
 #define TSF_GC_F 1024
 
-//#define TSF_MEM_PROF // quick and dirty memory profile
+#define TSF_MEM_PROF // quick and dirty memory profile
 
 #ifdef TSF_MEM_PROF
 #include <stdlib.h>
@@ -378,6 +378,10 @@ static inline int32_t __SMLABB(int32_t x, int32_t y, int32_t z) {
 #include "reverb.h"
 #endif
 
+#ifndef TSF_NO_CHORUS
+#include "chorus.h"
+#endif
+
 typedef char tsf_fourcc[4];
 typedef int8_t tsf_s8;
 typedef uint8_t tsf_u8;
@@ -418,6 +422,9 @@ struct tsf
 	uint16_t gc;
 #ifndef TSF_NO_REVERB
 	reverb_t rev_l, rev_r;
+#endif
+#ifndef TSF_NO_CHORUS
+	chorus_t chorus_l, chorus_r;
 #endif
 };
 
@@ -535,6 +542,7 @@ struct tsf_voice
 struct tsf_channel
 {
 	uint16_t presetIndex, bank, pitchWheel, midiPan, midiVolume, midiExpression, midiRPN, midiData;
+	int8_t reverb, chorus;
 	float panOffset, gainDB, pitchRange, tuning;
 	int16_t buffer[TSF_RENDER_EFFECTSAMPLEBLOCK];
 };
@@ -1428,7 +1436,6 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 #endif
 		struct tsf_channel* c = &f->channels->channels[v->playingChannel];
 
-		int16_t *chan_output = c->buffer;
 		buf = samplesBuf;
 		blkCnt = (blockSamples - blckRemain) >> 1;
 		while (blkCnt--)
@@ -1483,8 +1490,8 @@ TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
 
 	if(decay < 0.0f)
 		decay = 0.0f;
-	if(decay > 0.95f)
-		decay = 0.95f;
+	if(decay > 1.0)
+		decay = 1.0f;
 
 	reverb_set_colour(&f->rev_l, colour);
 	reverb_set_size(&f->rev_l, size);
@@ -1494,6 +1501,34 @@ TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
 	reverb_set_colour(&f->rev_r, colour);
 	reverb_set_size(&f->rev_r, size);
 	reverb_set_decay(&f->rev_r, decay);
+}
+#endif
+
+#ifndef TSF_NO_CHORUS
+TSFDEF void tsf_chorus_setup(tsf* f) {
+// chorus 1
+//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
+
+// chorus 2
+//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
+//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
+
+// chorus 3
+	chorus_init(&f->chorus_l, f->outSampleRate, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
+	chorus_init(&f->chorus_r, f->outSampleRate, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
+
+// chorus 4
+//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
+//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
+
+// FB chorus
+//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
+//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
+
+// flanger
+//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
 }
 #endif
 
@@ -1588,6 +1623,10 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 			reverb_init(&res->rev_r);
 
 			tsf_reverb_setup(res, 0.0f, 0.1f, 0.0f);
+		#endif
+
+		#ifndef TSF_NO_CHORUS
+			tsf_chorus_setup(res);
 		#endif
 
 		tsf_preload_presets(res);
@@ -1859,6 +1898,11 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 		}
 	}
 
+	#ifndef TSF_NO_CHORUS
+		chorus_process(&f->chorus_l, buffer, buffer, samples*2, 0, 2);
+		chorus_process(&f->chorus_r, buffer, buffer, samples*2, 1, 2);
+	#endif
+
 	#ifndef TSF_NO_REVERB
 		reverb_process(&f->rev_l, buffer, buffer, samples*2, 0, 2);
 		reverb_process(&f->rev_r, buffer, buffer, samples*2, 1, 2);
@@ -2090,8 +2134,8 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		tsf_channel_set_pan(f, channel, 0.5f);
 		tsf_channel_set_pitchrange(f, channel, 2.0f);
 		return;
-//	case 91: /* reverb */ return;
-//	case 93: /* chorus */ return;
+	case 91 /* reverb */ : c->reverb = control_value; return;
+	case 93 /* chorus */ : c->chorus = control_value; return;
 //	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
