@@ -238,7 +238,7 @@ TSFDEF float tsf_channel_get_tuning(tsf* f, int32_t channel);
 // execute GC every TSF_GC_F render
 #define TSF_GC_F 1024
 
-#define TSF_MEM_PROF // quick and dirty memory profile
+//#define TSF_MEM_PROF // quick and dirty memory profile
 
 #ifdef TSF_MEM_PROF
 #include <stdlib.h>
