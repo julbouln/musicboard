@@ -160,8 +160,10 @@ int chorus_init(chorus_t *chorus, int rate, float delay, float decay, float spee
 		chorus->maxsamples = chorus->samples;
 
 //	printf("MALLOC %ld\n", sizeof (float) * chorus->maxsamples);
-	if (! (chorus->chorusbuf = (int16_t *) TSF_MALLOC(sizeof (int16_t) * chorus->maxsamples)))
-		return 0;
+	if(!chorus->chorusbuf)
+		chorus->chorusbuf = (int16_t *) TSF_MALLOC(sizeof (int16_t) * chorus->maxsamples);
+	else
+		chorus->chorusbuf = (int16_t *) TSF_REALLOC(chorus->chorusbuf, sizeof (int16_t) * chorus->maxsamples);
 
 	for ( i = 0; i < chorus->maxsamples; i++ )
 		chorus->chorusbuf[i] = 0.0f;

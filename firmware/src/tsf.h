@@ -1575,29 +1575,8 @@ TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
 #endif
 
 #ifndef TSF_NO_CHORUS
-TSFDEF void tsf_chorus_setup(tsf* f) {
-// chorus 1
-//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
-//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
-
-// chorus 2
-//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
-//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
-
-// chorus 3
-	chorus_init(&f->chorus, f->outSampleRate, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
-
-// chorus 4
-//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
-//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
-
-// FB chorus
-//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
-//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
-
-// flanger
-//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
-//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
+TSFDEF void tsf_chorus_setup(tsf* f, float delay, float decay, float speed, float depth) {
+	chorus_init(&f->chorus, f->outSampleRate, delay, decay, speed, depth, MOD_TRIANGLE);
 }
 #endif
 
@@ -1688,11 +1667,11 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->gc = 0;
 
 		#ifndef TSF_NO_REVERB
-			tsf_reverb_setup(res, 0.0f, 0.7f, 0.7f);
+			tsf_reverb_setup(res, 0.0f, 0.7f, 0.7f); // default large hall
 		#endif
 
 		#ifndef TSF_NO_CHORUS
-			tsf_chorus_setup(res);
+			tsf_chorus_setup(res, 50.0f, 0.5f, 0.4f, 6.3f); // default chorus 3
 		#endif
 
 		tsf_preload_presets(res);

@@ -7,9 +7,14 @@
 #include <vector>
 
 //#define TSF_NO_STDIO
-#define TSF_RENDER_EFFECTSAMPLEBLOCK 256
+#define TSF_RENDER_EFFECTSAMPLEBLOCK 64
 
 #define TSF_IMPLEMENTATION
+#define TSF_NO_PRESET_NAME
+//#define TSF_NO_INTERPOLATION
+//#define TSF_NO_LOWPASS
+//#define TSF_NO_REVERB
+//#define TSF_NO_CHORUS
 #include "tsf.h"
 
 #include "RtAudio.h"
@@ -19,7 +24,7 @@
 
 #define AUDIO_FORMAT RTAUDIO_SINT16
 
-#define FRAME_SIZE 1024
+#define FRAME_SIZE 512
 
 using namespace std;
 
@@ -60,7 +65,11 @@ void midiCallback(double deltatime, vector<uint8_t>* msg, void* userData)
 //    std::cout << "MIDI Pitch Bend   C: " << chan << " P: " << b << std::endl;
     break;
   default:
-    std::cout << "MIDI msg   C: " << chan << " B1: " << b1 << " B2: " << b2 << std::endl;
+    std::cout << "MIDI msg ";
+    for(int i=0;i<msg->size();i++) {
+      std::cout << std::hex << (int)msg->at(i)  << " ";
+    }
+    std::cout << std::endl;
     break;
 
   }
