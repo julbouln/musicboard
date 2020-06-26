@@ -3,6 +3,17 @@ CFLAGS=-O3 -march=native -g -I../firmware/src -I. -Wall #-fno-inline
 mid2wav_tsf:
 	gcc $(CFLAGS) mid2wav_tsf.c -o mid2wav_tsf $^ -lc -lm -lsndfile
 
+rt/RtAudio.o:
+#	g++ $(CFLAGS) -std=c++11 -Irt -D__LINUX_PULSE__ -c -o rt/RtAudio.o rt/RtAudio.cpp
+	g++ $(CFLAGS) -std=c++11 -Irt -D__LINUX_ALSA__ -c -o rt/RtAudio.o rt/RtAudio.cpp
+
+rt/RtMidi.o:
+	g++ $(CFLAGS) -std=c++11 -Irt -D__LINUX_ALSA__ -c -o rt/RtMidi.o rt/RtMidi.cpp
+
+synth: rt/RtAudio.o rt/RtMidi.o
+	g++ $(CFLAGS) -fpermissive synth.cpp -o synth $^ -lc -lm -lpthread -lasound -lpulse -lpulse-simple
+	objdump -sSt synth >synth.lst
+
 mid2wav_efluidsynth:
 	gcc $(CFLAGS) -DFLUID_NO_NAMES -DFLUID_SAMPLE_MMAP -DFLUID_NO_NRPN_EXT -DFLUID_CALC_FORMAT_FLOAT -DFLUID_BUFFER_S16 -DFLUID_FIXED_POINT \
 	-g -I../firmware/src/efluidsynth \
@@ -23,3 +34,5 @@ massif: mid2wav_tsf
 clean:
 	rm -f mid2wav_tsf
 	rm -f mid2wav_efluidsynth
+	rm -f synth
+	rm -f rt/*.o

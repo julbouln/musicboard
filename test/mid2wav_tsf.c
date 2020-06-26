@@ -1,4 +1,4 @@
-#define TSF_RENDER_EFFECTSAMPLEBLOCK 64
+#define TSF_RENDER_EFFECTSAMPLEBLOCK 256
 #define TSF_NO_PRESET_NAME
 //#define TSF_NO_INTERPOLATION
 //#define TSF_NO_LOWPASS
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 	tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
 	#ifndef TSF_NO_REVERB
 	//printf("sizeof(reverb_t) = %ld\n",sizeof(reverb_t));
-	tsf_reverb_setup(synth, 0.0f, 0.7f, 0.7f);
+	//tsf_reverb_setup(synth, 0.0f, 0.7f, 0.7f);
 	#endif
 
 	SNDFILE	*outfile;
