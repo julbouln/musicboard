@@ -242,6 +242,7 @@ TSFDEF float tsf_channel_get_tuning(tsf* f, int32_t channel);
 
 #ifdef TSF_MEM_PROF
 #include <stdlib.h>
+#include <malloc.h>
 uint64_t cur_mem = 0;
 uint64_t max_mem = 0;
 
@@ -421,10 +422,10 @@ struct tsf
 
 	uint16_t gc;
 #ifndef TSF_NO_REVERB
-	reverb_t rev_l, rev_r;
+	reverb_t rev;
 #endif
 #ifndef TSF_NO_CHORUS
-	chorus_t chorus_l, chorus_r;
+	chorus_t chorus;
 #endif
 };
 
@@ -522,7 +523,7 @@ struct tsf_preset
 	int32_t regionNum;
 	int32_t pphdrIdx;
 	TSF_BOOL loaded;
-	uint32_t refCount;
+	uint16_t refCount;
 };
 
 struct tsf_voice
@@ -542,7 +543,7 @@ struct tsf_voice
 struct tsf_channel
 {
 	uint16_t presetIndex, bank, pitchWheel, midiPan, midiVolume, midiExpression, midiRPN, midiData;
-	int8_t reverb, chorus;
+	float reverb, chorus;
 	float panOffset, gainDB, pitchRange, tuning;
 	int16_t buffer[TSF_RENDER_EFFECTSAMPLEBLOCK];
 };
@@ -1301,7 +1302,7 @@ static void tsf_voice_calcpitchratio(struct tsf_voice* v, float pitchShift, floa
 	v->pitchOutputFactor = v->region->sample_rate / (tsf_timecents2Secsf(v->region->pitch_keycenter * 100.0) * outSampleRate);
 }
 
-static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer, int32_t numSamples)
+static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer, int16_t *chorusBuffer, int16_t *reverbBuffer, int32_t numSamples)
 {
 	struct tsf_region* region = v->region;
 	int16_t* input = f->fontSamplesOffset + f->fontSamples;
@@ -1336,10 +1337,16 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 	if (dynamicGain) tmpModLfoToVolume = (float)region->modLfoToVolume * 0.1f;
 	else noteGain = tsf_decibelsToGain(v->noteGainDB), tmpModLfoToVolume = 0;
 
+	struct tsf_channel *chan = &f->channels->channels[v->playingChannel];
+
+	int16_t *fxRevBuf = reverbBuffer;
+	int16_t *fxChorusBuf = chorusBuffer;
+
 	while (numSamples)
 	{
 		float gainMono;
 		int32_t gainLeft, gainRight;
+		int32_t gainChorus, gainReverb;
 		int32_t blockSamples = (numSamples > TSF_RENDER_EFFECTSAMPLEBLOCK ? TSF_RENDER_EFFECTSAMPLEBLOCK : numSamples);
 		numSamples -= blockSamples;
 
@@ -1376,7 +1383,15 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 #endif
 
 		gainLeft = float_to_fixed(gainMono * v->panFactorLeft), gainRight = float_to_fixed(gainMono * v->panFactorRight);
+#ifndef TSF_NO_CHORUS
+		gainChorus = float_to_fixed(gainMono * chan->chorus);
+#endif
+#ifndef TSF_NO_REVERB
+		gainReverb = float_to_fixed(gainMono * chan->reverb);
+#endif
+
 		// printf("gain: %f %f\n",gainMono * v->panFactorLeft, gainMono * v->panFactorRight);
+		//printf("chorus: %f\n",gainMono * chan->chorus);
 
 		int32_t samplesBuf[TSF_RENDER_EFFECTSAMPLEBLOCK];
 		int32_t *buf = samplesBuf;
@@ -1429,12 +1444,71 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 				out1 = tsf_voice_lowpass_process(&tmpLowpass, in1);
 
 				buf -= 2;
+
 				*buf++ = out0;
 				*buf++ = out1;
 			}
 		}
 #endif
-		struct tsf_channel* c = &f->channels->channels[v->playingChannel];
+		//struct tsf_channel* c = &f->channels->channels[v->playingChannel];
+
+#ifndef TSF_NO_CHORUS
+		buf = samplesBuf;
+		blkCnt = (blockSamples - blckRemain) >> 2;
+		while (blkCnt--)
+		{
+			in0 = *buf++;
+		    in1 = *buf++;
+			in2 = *buf++;
+		    in3 = *buf++;
+
+			out0 = *fxChorusBuf++ << 15;
+			out1 = *fxChorusBuf++ << 15;
+			out2 = *fxChorusBuf++ << 15;
+			out3 = *fxChorusBuf++ << 15;
+
+		    out0 += (in0 * gainChorus);
+		    out1 += (in1 * gainChorus);
+		    out2 += (in2 * gainChorus);
+		    out3 += (in3 * gainChorus);
+
+			fxChorusBuf -= 4;
+			
+			*fxChorusBuf++ = __SSAT(out0 >> 15, 16);
+			*fxChorusBuf++ = __SSAT(out1 >> 15, 16);
+			*fxChorusBuf++ = __SSAT(out2 >> 15, 16);
+			*fxChorusBuf++ = __SSAT(out3 >> 15, 16);
+		}
+#endif
+
+#ifndef TSF_NO_REVERB
+		buf = samplesBuf;
+		blkCnt = (blockSamples - blckRemain) >> 2;
+		while (blkCnt--)
+		{
+			in0 = *buf++;
+		    in1 = *buf++;
+			in2 = *buf++;
+		    in3 = *buf++;
+
+			out0 = *fxRevBuf++ << 15;
+			out1 = *fxRevBuf++ << 15;
+			out2 = *fxRevBuf++ << 15;
+			out3 = *fxRevBuf++ << 15;
+
+		    out0 += (in0 * gainReverb);
+		    out1 += (in1 * gainReverb);
+		    out2 += (in2 * gainReverb);
+		    out3 += (in3 * gainReverb);
+
+			fxRevBuf -= 4;
+			
+			*fxRevBuf++ = __SSAT(out0 >> 15, 16);
+			*fxRevBuf++ = __SSAT(out1 >> 15, 16);
+			*fxRevBuf++ = __SSAT(out2 >> 15, 16);
+			*fxRevBuf++ = __SSAT(out3 >> 15, 16);
+		}
+#endif
 
 		buf = samplesBuf;
 		blkCnt = (blockSamples - blckRemain) >> 1;
@@ -1493,42 +1567,37 @@ TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
 	if(decay > 1.0)
 		decay = 1.0f;
 
-	reverb_set_colour(&f->rev_l, colour);
-	reverb_set_size(&f->rev_l, size);
-	reverb_set_decay(&f->rev_l, decay);
-
-	reverb_init(&f->rev_r);
-	reverb_set_colour(&f->rev_r, colour);
-	reverb_set_size(&f->rev_r, size);
-	reverb_set_decay(&f->rev_r, decay);
+	reverb_init(&f->rev);
+	reverb_set_colour(&f->rev, colour);
+	reverb_set_size(&f->rev, size);
+	reverb_set_decay(&f->rev, decay);
 }
 #endif
 
 #ifndef TSF_NO_CHORUS
 TSFDEF void tsf_chorus_setup(tsf* f) {
 // chorus 1
-//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
-//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.4f, 1.9f, MOD_TRIANGLE);
 
 // chorus 2
-//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
-//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 1.1f, 6.3f, MOD_TRIANGLE);
 
 // chorus 3
-	chorus_init(&f->chorus_l, f->outSampleRate, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
-	chorus_init(&f->chorus_r, f->outSampleRate, 0.7f, 0.9f, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
+	chorus_init(&f->chorus, f->outSampleRate, 50.0f, 0.5f, 0.4f, 6.3f, MOD_TRIANGLE);
 
 // chorus 4
-//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
-//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 1.1f, 5.3f, MOD_TRIANGLE);
 
 // FB chorus
-//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
-//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.2f, 7.8f, MOD_TRIANGLE);
 
 // flanger
-//	chorus_init(&chorus_l, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
-//	chorus_init(&chorus_r, SAMPLE_RATE, 0.7f, 0.9f, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_l, f->outSampleRate, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
+//	chorus_init(&f->chorus_r, f->outSampleRate, 50.0f, 0.5f, 0.1f, 1.9f, MOD_TRIANGLE);
 }
 #endif
 
@@ -1619,10 +1688,7 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->gc = 0;
 
 		#ifndef TSF_NO_REVERB
-			reverb_init(&res->rev_l);
-			reverb_init(&res->rev_r);
-
-			tsf_reverb_setup(res, 0.0f, 0.1f, 0.0f);
+			tsf_reverb_setup(res, 0.0f, 0.7f, 0.7f);
 		#endif
 
 		#ifndef TSF_NO_CHORUS
@@ -1825,9 +1891,12 @@ TSFDEF void tsf_gc(tsf * f) {
 
 		for (int32_t i = 0; i < f->presetNum; i++) {
 			if (f->presets[i].refCount == 0 && f->presets[i].loaded == TSF_TRUE) {
-				f->presets[i].refCount = 0;
+#ifdef TSF_MEM_PROF
+				printf("GC unload preset %d\n",i);
+#endif
 				tsf_unload_preset(f, i);
 			}
+			f->presets[i].refCount = 0;
 		}
 	}
 
@@ -1888,24 +1957,31 @@ TSFDEF int32_t tsf_active_voice_count(tsf* f)
 TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t flag_mixing)
 {
 	tsf_gc(f);
+
+	int16_t chorusBuffer[samples];
+	int16_t reverbBuffer[samples];
+
 	struct tsf_voice *v = f->voices, *vEnd = v + f->voiceNum;
+
+	TSF_MEMSET(chorusBuffer, 0, sizeof(int16_t) * samples);
+	TSF_MEMSET(reverbBuffer, 0, sizeof(int16_t) * samples);
+
 	if (!flag_mixing) TSF_MEMSET(buffer, 0, (f->outputmode == TSF_MONO ? 1 : 2) * sizeof(int16_t) * samples);
+
 	for (; v != vEnd; v++) {
 		if (v->playingPreset != -1 && v->locked == 0) {
 			v->locked = 1;
-			tsf_voice_render(f, v, buffer, samples);
+			tsf_voice_render(f, v, buffer, chorusBuffer, reverbBuffer, samples);
 			v->locked = 0;
 		}
 	}
 
 	#ifndef TSF_NO_CHORUS
-		chorus_process(&f->chorus_l, buffer, buffer, samples*2, 0, 2);
-		chorus_process(&f->chorus_r, buffer, buffer, samples*2, 1, 2);
+		chorus_process(&f->chorus, chorusBuffer, buffer, samples);
 	#endif
 
 	#ifndef TSF_NO_REVERB
-		reverb_process(&f->rev_l, buffer, buffer, samples*2, 0, 2);
-		reverb_process(&f->rev_r, buffer, buffer, samples*2, 1, 2);
+		reverb_process(&f->rev, reverbBuffer, buffer, samples);
 	#endif
 }
 
@@ -1955,6 +2031,8 @@ static struct tsf_channel* tsf_channel_init(tsf* f, int32_t channel)
 		c->gainDB = 0.0f;
 		c->pitchRange = 2.0f;
 		c->tuning = 0.0f;
+		c->chorus = 0.0f;
+		c->reverb = 0.0f;
 	}
 	return &f->channels->channels[channel];
 }
@@ -2134,9 +2212,9 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		tsf_channel_set_pan(f, channel, 0.5f);
 		tsf_channel_set_pitchrange(f, channel, 2.0f);
 		return;
-	case 91 /* reverb */ : c->reverb = control_value; return;
-	case 93 /* chorus */ : c->chorus = control_value; return;
-//	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	case 91 /* reverb */ : c->reverb = (float)control_value/127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
+	case 93 /* chorus */ : c->chorus = (float)control_value/127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
+	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

@@ -77,7 +77,6 @@ typedef struct _chorus_t {
 	int	counter;
 	int32_t	phase;
 	int16_t	*chorusbuf;
-	int16_t	in_gain, out_gain;
 	float	delay;
 	int16_t decay;
 	float	speed, depth;
@@ -103,7 +102,6 @@ static inline int32_t _chorus_triangle(int i, long len, int max, int depth)
 {
 	int32_t smpl = 0;
 	int32_t offset;
-	float val;
 
 	offset = max - 2 * depth;
 	if (i < len / 2) {
@@ -116,11 +114,8 @@ static inline int32_t _chorus_triangle(int i, long len, int max, int depth)
 }
 
 
-int chorus_init(chorus_t *chorus, int rate, float in_gain, float out_gain, float delay, float decay, float speed, float depth, int mod) {
+int chorus_init(chorus_t *chorus, int rate, float delay, float decay, float speed, float depth, int mod) {
 	int i;
-
-	chorus->in_gain = (int16_t)(in_gain * 32768.0f);
-	chorus->out_gain = (int16_t)(out_gain * 32768.0f);
 
 	chorus->delay = delay;
 	chorus->decay = (int16_t)(decay * 32768.0f);
@@ -128,17 +123,7 @@ int chorus_init(chorus_t *chorus, int rate, float in_gain, float out_gain, float
 	chorus->depth = depth;
 	chorus->modulation = mod;
 
-	float sum_in_volume;
 	chorus->maxsamples = 0;
-
-	if ( chorus->in_gain < 0 )
-		chorus->in_gain = 0;
-/*
-	if ( chorus->in_gain > 1.0 )
-		chorus->in_gain = 1.0;
-*/
-	if ( chorus->out_gain < 0 )
-		chorus->out_gain = 0;
 
 	chorus->samples = (int) ( ( chorus->delay + chorus->depth ) * rate / 1000.0);
 	chorus->depth_samples = (int) (chorus->depth * rate / 1000.0);
@@ -174,12 +159,6 @@ int chorus_init(chorus_t *chorus, int rate, float in_gain, float out_gain, float
 	if ( chorus->samples > chorus->maxsamples )
 		chorus->maxsamples = chorus->samples;
 
-	/* Be nice and check the hint with warning, if... */
-	sum_in_volume = 1.0f;
-	sum_in_volume += chorus->decay;
-//	if ( chorus->in_gain * ( sum_in_volume ) > 1.0 / chorus->out_gain )
-//	st_warn("chorus: warning >>> gain-out can cause saturation or clipping of output <<<");
-
 //	printf("MALLOC %ld\n", sizeof (float) * chorus->maxsamples);
 	if (! (chorus->chorusbuf = (int16_t *) TSF_MALLOC(sizeof (int16_t) * chorus->maxsamples)))
 		return 0;
@@ -197,19 +176,16 @@ int chorus_init(chorus_t *chorus, int rate, float in_gain, float out_gain, float
  * Processed signed long samples from ibuf to obuf.
  * Return number of samples processed.
  */
-int chorus_process(chorus_t *chorus, int16_t *ibuf, int16_t *obuf, uint32_t len, unsigned int offset, unsigned int incr)
+int chorus_process(chorus_t *chorus, int16_t *in, int16_t *out, uint32_t samples)
 {
 	int c;
 
-	int16_t d_in = 0;
-	int32_t d_out = 0;
+	int16_t in_m = 0;
+	int32_t out_m = 0;
+	int32_t out_l, out_r;
 
-	for (c = offset; c < len; c += incr) {
-		/* Store delays as 24-bit signed longs */
-		d_in = ibuf[c];
-		/* Compute output first */
-		d_out = (int32_t)d_in * (int32_t)chorus->in_gain;
-		//int32_t
+	for (c = 0; c < samples; c ++) {
+		in_m = in[c] / 4;
 		int32_t mod_val;
 
 		if (chorus->modulation == MOD_SINE)
@@ -217,13 +193,20 @@ int chorus_process(chorus_t *chorus, int16_t *ibuf, int16_t *obuf, uint32_t len,
 		else
 			mod_val = _chorus_triangle(chorus->phase, chorus->length, chorus->samples - 1, chorus->depth_samples);
 
-		d_out += (int32_t)chorus->chorusbuf[(chorus->maxsamples + chorus->counter - mod_val) % chorus->maxsamples] * (int32_t)chorus->decay;
-		/* Adjust the output volume and size to 24 bit */
-		d_out = (d_out >> 15) * (int32_t)chorus->out_gain;
-		// out = st_clip24((LONG) d_out);
-		obuf[c] =  __SSAT((int32_t)(d_out >> 15), 16);
+		out_m = (int32_t)chorus->chorusbuf[(chorus->maxsamples + chorus->counter - mod_val) % chorus->maxsamples] * (int32_t)chorus->decay;
+
+		out_m = out_m >> 15;
+
+		out_l = *out++;
+		out_r = *out++;
+
+		out-=2;
+
+		*out++ = __SSAT(out_m + out_l * 3/4, 16);
+		*out++ = __SSAT(out_m + out_r * 3/4, 16);
+
 		/* Mix decay of delay and input */
-		chorus->chorusbuf[chorus->counter] = d_in;
+		chorus->chorusbuf[chorus->counter] = in_m;
 		chorus->counter = ( chorus->counter + 1 ) % chorus->maxsamples;
 		chorus->phase = (chorus->phase + 1 ) % chorus->length;
 	}

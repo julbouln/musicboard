@@ -69,13 +69,13 @@ typedef struct {
     int16_t comb[NUM_COMBS][COMB_SIZE];   /* buffers for comb filters */
     int16_t ap[NUM_APS][AP_SIZE];        /* buffers for ap filters */
 #endif
-} reverb_t; // 22604 bytes
+} reverb_t;
 
 void reverb_set_colour(reverb_t *rev, float colour);
 void reverb_set_size(reverb_t *rev, float size);
 void reverb_set_decay(reverb_t *rev, float decay);
 void reverb_init(reverb_t *rev);
-void reverb_process(reverb_t *params, int16_t *in, int16_t *out, uint32_t sample_count, unsigned int offset, unsigned int incr);
+void reverb_process(reverb_t *params, int16_t *in, int16_t *out, uint32_t sample_count);
 
 void reverb_set_colour(reverb_t *rev, float colour) {
     rev->colour = colour;
@@ -150,7 +150,7 @@ void reverb_init(reverb_t *rev) {
     reverb_set_decay(rev, 0.0f);
 }
 
-void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int sample_count, unsigned int offset, unsigned int incr) {
+void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int samples) {
     // handle the actual processing
     uint32_t pos;
     uint32_t comb_pos = rev->comb_pos;
@@ -162,12 +162,14 @@ void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int sampl
     int16_t * output = out;
 
     int32_t in_s, in_s1, temp;
+    int32_t out_m;
+    int32_t out_l, out_r;
 
     /* loop around the buffer */
-    for (pos = offset; pos < sample_count; pos+=incr) {
+    for (pos = 0; pos < samples; pos++) {
         /* loop around the comb filters */
         temp = 0;
-        in_s = input[pos] / 3;
+        in_s = input[pos] / 4;
 
         rev->lpo = ((int32_t)rev->a0 * (int32_t)in_s + (int32_t)rev->b1 * (int32_t)rev->lpo) >> 15;
         in_s1 = (in_s << 15) + (int32_t)rev->gl * (int32_t)rev->lpo + (int32_t)rev->gh * (int32_t)(in_s - rev->lpo);
@@ -195,7 +197,16 @@ void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int sampl
             temp = __SSAT((((int32_t)rev->d1 * temp) >> 15) + v, 16);
         }
 
-        output[pos] = __SSAT((((int32_t)rev->d2 * temp) >> 15) + input[pos] * 2/3, 16);
+        out_m = __SSAT((((int32_t)rev->d2 * temp) >> 15), 16);
+
+        out_l = *output++;
+        out_r = *output++;
+
+        output-=2;
+
+        *output++ = __SSAT(out_m + out_l * 3/4, 16);
+        *output++ = __SSAT(out_m + out_r * 3/4, 16);
+
         comb_pos++;
         comb_pos &= COMB_MASK; /* increment and wrap buffer */
         ap_pos++;
