@@ -67,10 +67,13 @@
 #define CHORUS_H
 
 #include <stdlib.h> /* Harmless, and prototypes atof() etc. --dgc */
-#include <math.h>
 
 #define MOD_SINE	0
 #define MOD_TRIANGLE 1
+
+#ifndef M_PI
+#    define M_PI 3.14159265358979323846
+#endif
 
 typedef struct _chorus_t {
 	int	modulation;

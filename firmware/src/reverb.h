@@ -18,6 +18,8 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 */
 
+#include <math.h>
+
 //#define LOW_QUALITY // reduce memory requirement
 
 /* note that buffers need to be a power of 2 */
@@ -41,6 +43,10 @@ THIS SOFTWARE.
 
 #define MAX_NUM_COMBS 4
 #define MAX_NUM_APS 3
+
+#ifndef M_PI
+#    define M_PI 3.14159265358979323846
+#endif
 
 typedef struct {
     /* structure for reverb parameters */
@@ -75,7 +81,7 @@ void reverb_set_colour(reverb_t *rev, float colour);
 void reverb_set_size(reverb_t *rev, float size);
 void reverb_set_decay(reverb_t *rev, float decay);
 void reverb_init(reverb_t *rev);
-void reverb_process(reverb_t *params, int16_t *in, int16_t *out, uint32_t sample_count);
+void reverb_process(reverb_t *rev, int16_t *in, int16_t *out, unsigned int samples);
 
 void reverb_set_colour(reverb_t *rev, float colour) {
     rev->colour = colour;

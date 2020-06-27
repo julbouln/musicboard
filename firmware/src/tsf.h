@@ -18,7 +18,6 @@
    [OPTIONAL] #define TSF_POW, TSF_POWF, TSF_EXPF, TSF_LOG, TSF_TAN, TSF_LOG10, TSF_SQRT to avoid math.h
 
    NOT YET IMPLEMENTED
-     - Support for ChorusEffectsSend and ReverbEffectsSend generators
      - Better low-pass filter without lowering performance too much
      - Support for modulators
 
@@ -347,6 +346,12 @@ __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLABB (uint32_t o
 }
 
 #else
+
+#define __PKHBT(ARG1, ARG2, ARG3) ( (((int32_t)(ARG1) <<    0) & (int32_t)0x0000FFFF) | \
+                                      (((int32_t)(ARG2) << ARG3) & (int32_t)0xFFFF0000)  )
+#define __PKHTB(ARG1, ARG2, ARG3) ( (((int32_t)(ARG1) <<    0) & (int32_t)0xFFFF0000) | \
+                                      (((int32_t)(ARG2) >> ARG3) & (int32_t)0x0000FFFF)  )
+
 static int32_t __SSAT(int32_t x, int32_t y)
 {
 	if (x > (1 << (y - 1)) - 1) return (1 << (y - 1)) - 1;
@@ -1409,19 +1414,12 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			alpha = (tmpSourceSamplePosition - ((uint64_t)pos << 32)) >> 17;
 			nextPos = (isLooping && pos >= tmpLoopEnd ? tmpLoopStart : pos + 1);
 			
-			in0 = (int32_t)(32767 - alpha) << 16 | (int32_t)(alpha) & 0x0FFFF;
-			in1 = (int32_t)input[pos] << 16 | (int32_t)input[nextPos] & 0x0FFFF;
+			in0 = __PKHBT((32767 - alpha), alpha, 16);
+			in1 = __PKHBT(input[pos], input[nextPos], 16);
 
 			out0 = (int32_t)__SMUAD(in0, in1) >> 15;
 
 			*buf++ = __SSAT(out0, 16);
-
-			/*			
-			in0 = (32767 - alpha) * (int32_t)(input[pos]);
-			in1 = alpha * (int32_t)(input[nextPos]);
-
-			*buf++ = (in0 + in1) >> 15U;
-			*/
 #else
 			*buf++ = (int32_t)input[pos];			
 #endif
@@ -1450,7 +1448,6 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			}
 		}
 #endif
-		//struct tsf_channel* c = &f->channels->channels[v->playingChannel];
 
 #ifndef TSF_NO_CHORUS
 		buf = samplesBuf;
@@ -1462,15 +1459,15 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			in2 = *buf++;
 		    in3 = *buf++;
 
-			out0 = *fxChorusBuf++ << 15;
-			out1 = *fxChorusBuf++ << 15;
-			out2 = *fxChorusBuf++ << 15;
-			out3 = *fxChorusBuf++ << 15;
+			out0 = (int32_t)*fxChorusBuf++ << 15;
+			out1 = (int32_t)*fxChorusBuf++ << 15;
+			out2 = (int32_t)*fxChorusBuf++ << 15;
+			out3 = (int32_t)*fxChorusBuf++ << 15;
 
-		    out0 += (in0 * gainChorus);
-		    out1 += (in1 * gainChorus);
-		    out2 += (in2 * gainChorus);
-		    out3 += (in3 * gainChorus);
+		    out0 = __SMLABB(in0, gainChorus, out0);
+		    out1 = __SMLABB(in1, gainChorus, out1);
+		    out2 = __SMLABB(in2, gainChorus, out2);
+		    out3 = __SMLABB(in3, gainChorus, out3);
 
 			fxChorusBuf -= 4;
 			
@@ -1491,15 +1488,15 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			in2 = *buf++;
 		    in3 = *buf++;
 
-			out0 = *fxRevBuf++ << 15;
-			out1 = *fxRevBuf++ << 15;
-			out2 = *fxRevBuf++ << 15;
-			out3 = *fxRevBuf++ << 15;
+			out0 = (int32_t)*fxRevBuf++ << 15;
+			out1 = (int32_t)*fxRevBuf++ << 15;
+			out2 = (int32_t)*fxRevBuf++ << 15;
+			out3 = (int32_t)*fxRevBuf++ << 15;
 
-		    out0 += (in0 * gainReverb);
-		    out1 += (in1 * gainReverb);
-		    out2 += (in2 * gainReverb);
-		    out3 += (in3 * gainReverb);
+		    out0 = __SMLABB(in0, gainReverb, out0);
+		    out1 = __SMLABB(in1, gainReverb, out1);
+		    out2 = __SMLABB(in2, gainReverb, out2);
+		    out3 = __SMLABB(in3, gainReverb, out3);
 
 			fxRevBuf -= 4;
 			
