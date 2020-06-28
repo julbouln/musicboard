@@ -36,6 +36,7 @@ SRCS      += stm32f7xx_hal_rcc.c stm32f7xx_hal_rcc_ex.c stm32f7xx_hal.c stm32f7x
 			 usbd_msc_bot.c usbd_msc_scsi.c usbd_msc.c usbd_msc_data.c \
 			 usbd_composite.c \
 			 audio_buffer.c \
+			 midi.c synth.c \
 			 usbd_audio.c usbd_audio_if.c \
 			 usbd_midi.c usbd_midi_if.c \
 			 usbd_storage.c \

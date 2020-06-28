@@ -75,11 +75,8 @@
 #include "qspi_wrapper.h"
 #include "usbd_audio.h"
 
-
-#define MASTER_VOLUME 70
-#define SAMPLE_RATE 48000
-#define POLYPHONY 48 // with chorus & reverb, we can only achieve 48 voices
-#define AUDIO_BUF_SIZE (AUDIO_TOTAL_BUF_SIZE)
+#include "synth.h"
+#include "config.h"
 
 #endif /* __MAIN_H */
 

@@ -237,6 +237,8 @@ TSFDEF float tsf_channel_get_tuning(tsf* f, int32_t channel);
 // execute GC every TSF_GC_F render
 #define TSF_GC_F 1024
 
+#define TSF_MAX_SAMPLES 2048
+
 //#define TSF_MEM_PROF // quick and dirty memory profile
 
 #ifdef TSF_MEM_PROF
@@ -327,7 +329,7 @@ void prof_free(void *ptr) {
 extern "C" {
 #endif
 
-#ifdef __arm__
+#ifdef __ARM_FEATURE_DSP
 
 __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULBB(uint32_t op1, uint32_t op2)
 {
@@ -362,6 +364,12 @@ static int32_t __SSAT(int32_t x, int32_t y)
 static inline uint32_t __SMUAD(uint32_t x, uint32_t y)
 {
     return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) +
+                       ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
+}
+
+static inline uint32_t __SMUSD(uint32_t x, uint32_t y)
+{
+	return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) -
                        ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
 }
 
@@ -432,6 +440,10 @@ struct tsf
 #ifndef TSF_NO_CHORUS
 	chorus_t chorus;
 #endif
+
+	int16_t chorusBuffer[TSF_MAX_SAMPLES];
+	int16_t reverbBuffer[TSF_MAX_SAMPLES];
+
 };
 
 #ifndef TSF_NO_STDIO
@@ -1250,13 +1262,25 @@ static void tsf_voice_lowpass_setup(struct tsf_voice_lowpass* e, float Fc)
 //	printf("LOW-PASS a0:%d a1:%d b1:%d b2:%d\n",e->a0, e->a1, e->b1, e->b2);
 }
 
-static int32_t tsf_voice_lowpass_process(struct tsf_voice_lowpass* e, int32_t In)
+static int32_t tsf_voice_lowpass_process(struct tsf_voice_lowpass* e, int32_t in)
 {
-	int32_t Out = (e->a0 * In + e->z1) >> 15;
-	e->z1 = (e->a1 * In) + e->z2 - (e->b1 * Out);
-	e->z2 = (e->a0 * In) - (e->b2 * Out);
+	int32_t in0, in1, in2;
+	int32_t out;
+	out = (e->a0 * in + e->z1) >> 15;
+
+/*
+	in0 = __PKHBT(in, out, 16);
+	in1 = __PKHBT(e->a1, e->b1, 16);
+	in2 = __PKHBT(e->a0, e->b2, 16);
+	e->z1 = e->z2 + (int32_t)__SMUSD(in1, in0);
+	e->z2 = (int32_t)__SMUSD(in2, in0);
+*/
+
+	e->z1 = (e->a1 * in) + e->z2 - (e->b1 * out);
+	e->z2 = (e->a0 * in) - (e->b2 * out);
+
 	//printf("LOW-PASS in:%d out:%d z1:%d z2:%d\n",In,Out,e->z1,e->z2);
-	return __SSAT(Out, 16);
+	return __SSAT(out, 16);
 }
 
 #endif
@@ -1430,11 +1454,12 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 		blckRemain = blkCnt;
 
 #ifndef TSF_NO_LOWPASS
-		buf = samplesBuf;
-		blkCnt = (blockSamples - blckRemain) >> 1;
-		while (blkCnt--)
-		{
-			if (tmpLowpass.active) {
+		if (tmpLowpass.active) {
+			buf = samplesBuf;
+			blkCnt = (blockSamples - blckRemain) >> 1;
+
+			while (blkCnt--)
+			{
 				in0 = *buf++;
 				in1 = *buf++;
 
@@ -1443,67 +1468,9 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 
 				buf -= 2;
 
-				*buf++ = out0;
-				*buf++ = out1;
+				*buf++ = __SSAT(out0, 16);
+				*buf++ = __SSAT(out1, 16);
 			}
-		}
-#endif
-
-#ifndef TSF_NO_CHORUS
-		buf = samplesBuf;
-		blkCnt = (blockSamples - blckRemain) >> 2;
-		while (blkCnt--)
-		{
-			in0 = *buf++;
-		    in1 = *buf++;
-			in2 = *buf++;
-		    in3 = *buf++;
-
-			out0 = (int32_t)*fxChorusBuf++ << 15;
-			out1 = (int32_t)*fxChorusBuf++ << 15;
-			out2 = (int32_t)*fxChorusBuf++ << 15;
-			out3 = (int32_t)*fxChorusBuf++ << 15;
-
-		    out0 = __SMLABB(in0, gainChorus, out0);
-		    out1 = __SMLABB(in1, gainChorus, out1);
-		    out2 = __SMLABB(in2, gainChorus, out2);
-		    out3 = __SMLABB(in3, gainChorus, out3);
-
-			fxChorusBuf -= 4;
-			
-			*fxChorusBuf++ = __SSAT(out0 >> 15, 16);
-			*fxChorusBuf++ = __SSAT(out1 >> 15, 16);
-			*fxChorusBuf++ = __SSAT(out2 >> 15, 16);
-			*fxChorusBuf++ = __SSAT(out3 >> 15, 16);
-		}
-#endif
-
-#ifndef TSF_NO_REVERB
-		buf = samplesBuf;
-		blkCnt = (blockSamples - blckRemain) >> 2;
-		while (blkCnt--)
-		{
-			in0 = *buf++;
-		    in1 = *buf++;
-			in2 = *buf++;
-		    in3 = *buf++;
-
-			out0 = (int32_t)*fxRevBuf++ << 15;
-			out1 = (int32_t)*fxRevBuf++ << 15;
-			out2 = (int32_t)*fxRevBuf++ << 15;
-			out3 = (int32_t)*fxRevBuf++ << 15;
-
-		    out0 = __SMLABB(in0, gainReverb, out0);
-		    out1 = __SMLABB(in1, gainReverb, out1);
-		    out2 = __SMLABB(in2, gainReverb, out2);
-		    out3 = __SMLABB(in3, gainReverb, out3);
-
-			fxRevBuf -= 4;
-			
-			*fxRevBuf++ = __SSAT(out0 >> 15, 16);
-			*fxRevBuf++ = __SSAT(out1 >> 15, 16);
-			*fxRevBuf++ = __SSAT(out2 >> 15, 16);
-			*fxRevBuf++ = __SSAT(out3 >> 15, 16);
 		}
 #endif
 
@@ -1530,6 +1497,34 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 			*output++ = __SSAT(out1 >> 15, 16);
 			*output++ = __SSAT(out2 >> 15, 16);
 			*output++ = __SSAT(out3 >> 15, 16);
+
+#if 1
+#ifndef TSF_NO_CHORUS
+			out0 = (int32_t)*fxChorusBuf++ << 15;
+			out1 = (int32_t)*fxChorusBuf++ << 15;
+
+		    out0 = __SMLABB(in0, gainChorus, out0);
+		    out1 = __SMLABB(in1, gainChorus, out1);
+
+			fxChorusBuf -= 2;
+			
+			*fxChorusBuf++ = __SSAT(out0 >> 15, 16);
+			*fxChorusBuf++ = __SSAT(out1 >> 15, 16);
+#endif
+
+#ifndef TSF_NO_REVERB
+			out0 = (int32_t)*fxRevBuf++ << 15;
+			out1 = (int32_t)*fxRevBuf++ << 15;
+
+		    out0 = __SMLABB(in0, gainReverb, out0);
+		    out1 = __SMLABB(in1, gainReverb, out1);
+
+			fxRevBuf -= 2;
+			
+			*fxRevBuf++ = __SSAT(out0 >> 15, 16);
+			*fxRevBuf++ = __SSAT(out1 >> 15, 16);
+#endif
+#endif
 		}
 
 		if (tmpSourceSamplePosition >= tmpSampleEndDbl || v->ampenv.segment == TSF_SEGMENT_DONE)
@@ -1934,30 +1929,27 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 {
 	tsf_gc(f);
 
-	int16_t chorusBuffer[samples];
-	int16_t reverbBuffer[samples];
-
 	struct tsf_voice *v = f->voices, *vEnd = v + f->voiceNum;
 
-	TSF_MEMSET(chorusBuffer, 0, sizeof(int16_t) * samples);
-	TSF_MEMSET(reverbBuffer, 0, sizeof(int16_t) * samples);
+	TSF_MEMSET(f->chorusBuffer, 0, sizeof(int16_t) * samples);
+	TSF_MEMSET(f->reverbBuffer, 0, sizeof(int16_t) * samples);
 
 	if (!flag_mixing) TSF_MEMSET(buffer, 0, (f->outputmode == TSF_MONO ? 1 : 2) * sizeof(int16_t) * samples);
 
 	for (; v != vEnd; v++) {
 		if (v->playingPreset != -1 && v->locked == 0) {
 			v->locked = 1;
-			tsf_voice_render(f, v, buffer, chorusBuffer, reverbBuffer, samples);
+			tsf_voice_render(f, v, buffer, f->chorusBuffer, f->reverbBuffer, samples);
 			v->locked = 0;
 		}
 	}
 
 	#ifndef TSF_NO_CHORUS
-		chorus_process(&f->chorus, chorusBuffer, buffer, samples);
+		chorus_process(&f->chorus, f->chorusBuffer, buffer, samples);
 	#endif
 
 	#ifndef TSF_NO_REVERB
-		reverb_process(&f->rev, reverbBuffer, buffer, samples);
+		reverb_process(&f->rev, f->reverbBuffer, buffer, samples);
 	#endif
 }
 

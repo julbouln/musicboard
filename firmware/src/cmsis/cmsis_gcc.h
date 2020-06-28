@@ -2043,7 +2043,7 @@ __STATIC_FORCEINLINE  int32_t __QSUB( int32_t op1,  int32_t op2)
   return(result);
 }
 
-#if 0
+#if 1
 #define __PKHBT(ARG1,ARG2,ARG3) \
 ({                          \
   uint32_t __RES, __ARG1 = (ARG1), __ARG2 = (ARG2); \
@@ -2062,11 +2062,13 @@ __STATIC_FORCEINLINE  int32_t __QSUB( int32_t op1,  int32_t op2)
  })
 #endif
 
+#if 0
 #define __PKHBT(ARG1,ARG2,ARG3)          ( ((((uint32_t)(ARG1))          ) & 0x0000FFFFUL) |  \
                                            ((((uint32_t)(ARG2)) << (ARG3)) & 0xFFFF0000UL)  )
 
 #define __PKHTB(ARG1,ARG2,ARG3)          ( ((((uint32_t)(ARG1))          ) & 0xFFFF0000UL) |  \
                                            ((((uint32_t)(ARG2)) >> (ARG3)) & 0x0000FFFFUL)  )
+#endif
 
 __STATIC_FORCEINLINE int32_t __SMMLA (int32_t op1, int32_t op2, int32_t op3)
 {

@@ -40,9 +40,9 @@ Default make for STM32F746-DISCO board, use "make BOARD=MUSICBOARD" for custom b
 TODO:
 - bug: USB Audio asynchronous feedback does not seems to work in USB composite mode
 - feature: TinySoundFont does not fully implement SF2 (modulators)
-- feature: Add chorus & reverb
-- feature: USB-MIDI to MIDI interface
+- feature: USB-MIDI to MIDI interface (add MIDI-IN and MIDI-OUT)
 - feature: Audio IN
+- feature: Add sysex for chorus & reverb control
 
 Sources:
 - https://github.com/STMicroelectronics/STM32CubeF7
