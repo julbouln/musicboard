@@ -249,25 +249,25 @@ uint64_t max_mem = 0;
 
 void *prof_malloc(uint64_t size) {
 	cur_mem += size;
-	if(cur_mem > max_mem)
+	if (cur_mem > max_mem)
 		max_mem = cur_mem;
-	printf("MALLOC %ld/%ld\n",cur_mem,max_mem);
+	printf("MALLOC %ld/%ld\n", cur_mem, max_mem);
 	return malloc(size);
 }
 
 void *prof_realloc(void *ptr, uint64_t size) {
-	if(ptr)
+	if (ptr)
 		cur_mem -= malloc_usable_size(ptr);
 	cur_mem += size;
-	if(cur_mem > max_mem)
+	if (cur_mem > max_mem)
 		max_mem = cur_mem;
-	printf("REALLOC %ld/%ld\n",cur_mem, max_mem);
+	printf("REALLOC %ld/%ld\n", cur_mem, max_mem);
 	return realloc(ptr, size);
 }
 
 void prof_free(void *ptr) {
 	cur_mem -= malloc_usable_size(ptr);
-	printf("FREE %ld/%ld\n",cur_mem,max_mem);
+	printf("FREE %ld/%ld\n", cur_mem, max_mem);
 }
 #endif
 
@@ -333,18 +333,42 @@ extern "C" {
 
 __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULBB(uint32_t op1, uint32_t op2)
 {
-  uint32_t result;
+	uint32_t result;
 
-  __ASM volatile ("smulbb %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
-  return(result);
+	__ASM volatile ("smulbb %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
+	return (result);
 }
 
 __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLABB (uint32_t op1, uint32_t op2, uint32_t op3)
 {
-  uint32_t result;
+	uint32_t result;
 
-  __ASM volatile ("smlabb %0, %1, %2, %3" : "=r" (result) : "r" (op1), "r" (op2), "r" (op3) );
-  return(result);
+	__ASM volatile ("smlabb %0, %1, %2, %3" : "=r" (result) : "r" (op1), "r" (op2), "r" (op3) );
+	return (result);
+}
+
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLABT (uint32_t op1, uint32_t op2, uint32_t op3)
+{
+	uint32_t result;
+
+	__ASM volatile ("smlabt %0, %1, %2, %3" : "=r" (result) : "r" (op1), "r" (op2), "r" (op3) );
+	return (result);
+}
+
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLATB (uint32_t op1, uint32_t op2, uint32_t op3)
+{
+	uint32_t result;
+
+	__ASM volatile ("smlatb %0, %1, %2, %3" : "=r" (result) : "r" (op1), "r" (op2), "r" (op3) );
+	return (result);
+}
+
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLATT (uint32_t op1, uint32_t op2, uint32_t op3)
+{
+	uint32_t result;
+
+	__ASM volatile ("smlatt %0, %1, %2, %3" : "=r" (result) : "r" (op1), "r" (op2), "r" (op3) );
+	return (result);
 }
 
 #else
@@ -363,23 +387,36 @@ static int32_t __SSAT(int32_t x, int32_t y)
 
 static inline uint32_t __SMUAD(uint32_t x, uint32_t y)
 {
-    return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) +
-                       ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
+	return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) +
+	                   ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
 }
 
 static inline uint32_t __SMUSD(uint32_t x, uint32_t y)
 {
 	return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) -
-                       ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
+	                   ((((int32_t)x      ) >> 16) * (((int32_t)y      ) >> 16))   ));
 }
 
 static inline int32_t __SMULBB(int32_t x, int32_t y) {
-  return((int32_t)((int16_t) x) * (int32_t)((int16_t) y));
+	return ((int32_t)((int16_t) (x & 0xFFFF)) * (int32_t)((int16_t) (y & 0xFFFF)));
 }
 
 static inline int32_t __SMLABB(int32_t x, int32_t y, int32_t z) {
-  return((int32_t)((int16_t) x) * (int32_t)((int16_t) y) + z);
+	return ((int32_t)((int16_t) (x & 0xFFFF)) * (int32_t)((int16_t) (y & 0xFFFF)) + z);
 }
+
+static inline int32_t __SMLABT(int32_t x, int32_t y, int32_t z) {
+	return ((int32_t)((int16_t) (x & 0xFFFF)) * (int32_t)((int16_t) ((y >> 16) & 0xFFFF)) + z);
+}
+
+static inline int32_t __SMLATB(int32_t x, int32_t y, int32_t z) {
+	return ((int32_t)((int16_t) ((x >> 16) & 0xFFFF)) * (int32_t)((int16_t) (y & 0xFFFF)) + z);
+}
+
+static inline int32_t __SMLATT(int32_t x, int32_t y, int32_t z) {
+	return ((int32_t)((int16_t) ((x >> 16) & 0xFFFF)) * (int32_t)((int16_t) ((y >> 16) & 0xFFFF))  + z);
+}
+
 #endif
 
 #define float_to_fixed(v) (int32_t)((v) * 32768.0f)
@@ -441,8 +478,9 @@ struct tsf
 	chorus_t chorus;
 #endif
 
-	int16_t chorusBuffer[TSF_MAX_SAMPLES];
-	int16_t reverbBuffer[TSF_MAX_SAMPLES];
+	int32_t buffer[TSF_MAX_SAMPLES * 2];
+	int32_t chorusBuffer[TSF_MAX_SAMPLES];
+	int32_t reverbBuffer[TSF_MAX_SAMPLES];
 
 };
 
@@ -947,8 +985,6 @@ static void tsf_load_preset(tsf* res, int32_t idx)
 
 	int32_t region_index = 0;
 
-//	printf("PRESET LOAD %d\n",idx);
-
 	preset = &res->presets[idx];
 
 	stream->seek(stream->data, hydra->phdrPos + preset->pphdrIdx * phdrSizeInFile);
@@ -1105,7 +1141,6 @@ static void tsf_load_samples(int16_t** fontSamples, uint32_t* fontSampleCount, s
 	uint32_t offset = stream->tell(stream->data);
 
 	*fontSamples = (int16_t *)TSF_MMAP(0, chunkSmpl->size + offset, ((TSF_FILE *)stream->data));
-	//printf("MMAP %lx %ld:%d\n",(uint64_t)out,offset,chunkSmpl->size);
 	for (; samplesLeft; samplesLeft -= samplesToRead)
 	{
 		samplesToRead = (samplesLeft > 1024 ? 1024 : samplesLeft);
@@ -1255,7 +1290,7 @@ static void tsf_voice_lowpass_setup(struct tsf_voice_lowpass* e, float Fc)
 	float K = TSF_TAN(TSF_PI * Fc), KK = K * K;
 	float norm = 1 / (1 + K * e->QInv + KK);
 	e->a0 = float_to_fixed(KK * norm);
-	e->a1 = 2 * e->a0;
+	e->a1 = float_to_fixed(2 * KK * norm);
 	e->b1 = float_to_fixed(2 * (KK - 1) * norm);
 	e->b2 = float_to_fixed((1 - K * e->QInv + KK) * norm);
 
@@ -1267,19 +1302,10 @@ static int32_t tsf_voice_lowpass_process(struct tsf_voice_lowpass* e, int32_t in
 	int32_t in0, in1, in2;
 	int32_t out;
 	out = (e->a0 * in + e->z1) >> 15;
-
-/*
-	in0 = __PKHBT(in, out, 16);
-	in1 = __PKHBT(e->a1, e->b1, 16);
-	in2 = __PKHBT(e->a0, e->b2, 16);
-	e->z1 = e->z2 + (int32_t)__SMUSD(in1, in0);
-	e->z2 = (int32_t)__SMUSD(in2, in0);
-*/
-
 	e->z1 = (e->a1 * in) + e->z2 - (e->b1 * out);
 	e->z2 = (e->a0 * in) - (e->b2 * out);
 
-	//printf("LOW-PASS in:%d out:%d z1:%d z2:%d\n",In,Out,e->z1,e->z2);
+//	printf("LOW-PASS in:%d out:%d z1:%d z2:%d\n",In,Out,e->z1,e->z2);
 	return __SSAT(out, 16);
 }
 
@@ -1331,12 +1357,12 @@ static void tsf_voice_calcpitchratio(struct tsf_voice* v, float pitchShift, floa
 	v->pitchOutputFactor = v->region->sample_rate / (tsf_timecents2Secsf(v->region->pitch_keycenter * 100.0) * outSampleRate);
 }
 
-static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer, int16_t *chorusBuffer, int16_t *reverbBuffer, int32_t numSamples)
+static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer, int32_t *chorusBuffer, int32_t *reverbBuffer, int32_t numSamples)
 {
 	struct tsf_region* region = v->region;
 	int16_t* input = f->fontSamplesOffset + f->fontSamples;
-	int16_t* output = outputBuffer;
-	
+	int32_t* output = outputBuffer;
+
 	// Cache some values, to give them at least some chance of ending up in registers.
 	TSF_BOOL updateModEnv = (region->modEnvToPitch || region->modEnvToFilterFc);
 	TSF_BOOL updateModLFO = (v->modlfo.delta && (region->modLfoToPitch || region->modLfoToFilterFc || region->modLfoToVolume));
@@ -1368,14 +1394,14 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 
 	struct tsf_channel *chan = &f->channels->channels[v->playingChannel];
 
-	int16_t *fxRevBuf = reverbBuffer;
-	int16_t *fxChorusBuf = chorusBuffer;
+	int32_t *fxRevBuf = reverbBuffer;
+	int32_t *fxChorusBuf = chorusBuffer;
 
 	while (numSamples)
 	{
 		float gainMono;
-		int32_t gainLeft, gainRight;
-		int32_t gainChorus, gainReverb;
+		int32_t gainLeft, gainRight, gainStereo;
+		int32_t gainChorus = 0, gainReverb = 0, gainEffect;
 		int32_t blockSamples = (numSamples > TSF_RENDER_EFFECTSAMPLEBLOCK ? TSF_RENDER_EFFECTSAMPLEBLOCK : numSamples);
 		numSamples -= blockSamples;
 
@@ -1395,7 +1421,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 		if (dynamicGain)
 			noteGain = tsf_decibelsToGain(v->noteGainDB + (v->modlfo.level * tmpModLfoToVolume));
 
-		gainMono = noteGain * v->ampenv.level;
+		gainMono = noteGain * v->ampenv.level * 0.5f; // FIXME x 0.5 needed to avoid saturation with int32_t buf
 
 		// Update EG.
 		tsf_voice_envelope_process(&v->ampenv, blockSamples, tmpSampleRate);
@@ -1412,6 +1438,8 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 #endif
 
 		gainLeft = float_to_fixed(gainMono * v->panFactorLeft), gainRight = float_to_fixed(gainMono * v->panFactorRight);
+		gainStereo = __PKHBT(gainLeft, gainRight, 16);
+
 #ifndef TSF_NO_CHORUS
 		gainChorus = float_to_fixed(gainMono * chan->chorus);
 #endif
@@ -1419,8 +1447,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 		gainReverb = float_to_fixed(gainMono * chan->reverb);
 #endif
 
-		// printf("gain: %f %f\n",gainMono * v->panFactorLeft, gainMono * v->panFactorRight);
-		//printf("chorus: %f\n",gainMono * chan->chorus);
+		gainEffect = __PKHBT(gainChorus, gainReverb, 16);
 
 		int32_t samplesBuf[TSF_RENDER_EFFECTSAMPLEBLOCK];
 		int32_t *buf = samplesBuf;
@@ -1437,7 +1464,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 #ifndef TSF_NO_INTERPOLATION
 			alpha = (tmpSourceSamplePosition - ((uint64_t)pos << 32)) >> 17;
 			nextPos = (isLooping && pos >= tmpLoopEnd ? tmpLoopStart : pos + 1);
-			
+
 			in0 = __PKHBT((32767 - alpha), alpha, 16);
 			in1 = __PKHBT(input[pos], input[nextPos], 16);
 
@@ -1445,13 +1472,14 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 
 			*buf++ = __SSAT(out0, 16);
 #else
-			*buf++ = (int32_t)input[pos];			
+			*buf++ = (int32_t)input[pos];
 #endif
 			tmpSourceSamplePosition += phaseIncr;
 
 			if (isLooping && tmpSourceSamplePosition >= tmpLoopEndDbl) tmpSourceSamplePosition -= ((uint64_t)(tmpLoopEnd - tmpLoopStart + 1)) << 32;
 		}
-		blckRemain = blkCnt;
+
+		blckRemain = blkCnt + 1; // some blocks are skipped
 
 #ifndef TSF_NO_LOWPASS
 		if (tmpLowpass.active) {
@@ -1471,60 +1499,93 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 				*buf++ = __SSAT(out0, 16);
 				*buf++ = __SSAT(out1, 16);
 			}
+
+			blkCnt = (blockSamples - blckRemain) >> 1;
+			if ((blockSamples - blckRemain) - (blkCnt << 1) ) {
+				in0 = *buf++;
+				out0 = tsf_voice_lowpass_process(&tmpLowpass, in0);
+				buf -= 1;
+				*buf++ = __SSAT(out0, 16);
+			}
+
 		}
+
 #endif
 
 		buf = samplesBuf;
 		blkCnt = (blockSamples - blckRemain) >> 1;
 		while (blkCnt--)
 		{
-			in0 = *buf++;
-		    in1 = *buf++;
+			in0 = __PKHBT(buf[0], buf[1], 16);
+			buf += 2;
 
-		    out0 = (int32_t)*output++ << 15;
-		    out1 = (int32_t)*output++ << 15;
-		    out2 = (int32_t)*output++ << 15;
-		    out3 = (int32_t)*output++ << 15;
+			out0 = (int32_t) * output++;
+			out1 = (int32_t) * output++;
+			out2 = (int32_t) * output++;
+			out3 = (int32_t) * output++;
 
-		    out0 = __SMLABB(in0, gainLeft, out0);
-		    out1 = __SMLABB(in0, gainRight, out1);
-		    out2 = __SMLABB(in1, gainLeft, out2);
-		    out3 = __SMLABB(in1, gainRight, out3 );
+			out0 = __SMLABB(in0, gainStereo, out0);
+			out1 = __SMLABT(in0, gainStereo, out1);
+			out2 = __SMLATB(in0, gainStereo, out2);
+			out3 = __SMLATT(in0, gainStereo, out3);
 
 			output -= 4;
 
-			*output++ = __SSAT(out0 >> 15, 16);
-			*output++ = __SSAT(out1 >> 15, 16);
-			*output++ = __SSAT(out2 >> 15, 16);
-			*output++ = __SSAT(out3 >> 15, 16);
+			*output++ = out0;
+			*output++ = out1;
+			*output++ = out2;
+			*output++ = out3;
 
-#if 1
 #ifndef TSF_NO_CHORUS
-			out0 = (int32_t)*fxChorusBuf++ << 15;
-			out1 = (int32_t)*fxChorusBuf++ << 15;
+			out0 = (int32_t) * fxChorusBuf++;
+			out1 = (int32_t) * fxChorusBuf++;
 
-		    out0 = __SMLABB(in0, gainChorus, out0);
-		    out1 = __SMLABB(in1, gainChorus, out1);
+			out0 = __SMLABB(in0, gainEffect, out0);
+			out1 = __SMLATB(in0, gainEffect, out1);
 
 			fxChorusBuf -= 2;
-			
-			*fxChorusBuf++ = __SSAT(out0 >> 15, 16);
-			*fxChorusBuf++ = __SSAT(out1 >> 15, 16);
+
+			*fxChorusBuf++ = out0;
+			*fxChorusBuf++ = out1;
 #endif
 
 #ifndef TSF_NO_REVERB
-			out0 = (int32_t)*fxRevBuf++ << 15;
-			out1 = (int32_t)*fxRevBuf++ << 15;
+			out0 = (int32_t) * fxRevBuf++;
+			out1 = (int32_t) * fxRevBuf++;
 
-		    out0 = __SMLABB(in0, gainReverb, out0);
-		    out1 = __SMLABB(in1, gainReverb, out1);
+			out0 = __SMLABT(in0, gainEffect, out0);
+			out1 = __SMLATT(in0, gainEffect, out1);
 
 			fxRevBuf -= 2;
-			
-			*fxRevBuf++ = __SSAT(out0 >> 15, 16);
-			*fxRevBuf++ = __SSAT(out1 >> 15, 16);
+
+			*fxRevBuf++ = out0;
+			*fxRevBuf++ = out1;
 #endif
-#endif
+		}
+
+		// remaining sample
+		blkCnt = (blockSamples - blckRemain) >> 1;
+		if ((blockSamples - blckRemain) - (blkCnt << 1) ) {
+			in0 = __PKHBT(buf[0], buf[0], 16);
+			buf += 1;
+
+			out0 = (int32_t) * output++;
+			out1 = (int32_t) * output++;
+
+			out0 = __SMLABB(in0, gainStereo, out0);
+			out1 = __SMLABT(in0, gainStereo, out1);
+
+			output -= 2;
+
+			out0 = (int32_t) * fxChorusBuf++;
+			out0 = __SMLABB(in0, gainEffect, out0);
+			fxChorusBuf -= 1;
+			*fxChorusBuf++ = out0;
+
+			out0 = (int32_t) * fxRevBuf++;
+			out0 = __SMLABT(in0, gainEffect, out0);
+			fxRevBuf -= 1;
+			*fxRevBuf++ = out1;
 		}
 
 		if (tmpSourceSamplePosition >= tmpSampleEndDbl || v->ampenv.segment == TSF_SEGMENT_DONE)
@@ -1539,24 +1600,24 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int16_t* outputBuffer,
 }
 
 #ifndef TSF_NO_REVERB
-/* 
-Colour is a "tilt" EQ similar to that used on old Quad amps, rolling off the treble when turned down and bass when turned up 
-Size adjusts the size of the "room", and to an extent its shape. 
+/*
+Colour is a "tilt" EQ similar to that used on old Quad amps, rolling off the treble when turned down and bass when turned up
+Size adjusts the size of the "room", and to an extent its shape.
 Decay adjusts the feedback trim through the comb filters.
 */
 TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
-	if(colour < -6.0f)
+	if (colour < -6.0f)
 		colour = -6.0f;
-	if(colour > 6.0f)
+	if (colour > 6.0f)
 		colour = 6.0f;
-	if(size < 0.1f)
+	if (size < 0.1f)
 		size = 0.1f;
-	if(size > 1.0f)
+	if (size > 1.0f)
 		size = 1.0f;
 
-	if(decay < 0.0f)
+	if (decay < 0.0f)
 		decay = 0.0f;
-	if(decay > 1.0)
+	if (decay > 1.0)
 		decay = 1.0f;
 
 	reverb_init(&f->rev);
@@ -1606,9 +1667,9 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 					}
 
 				if HandleChunk(phdr) else if HandleChunk(pbag) else if HandleChunk(pmod)
-				else if HandleChunk(pgen) else if HandleChunk(inst) else if HandleChunk(ibag)
-				else if HandleChunk(imod) else if HandleChunk(igen) else if HandleChunk(shdr)
-				else stream->skip(stream->data, chunk.size);
+							else if HandleChunk(pgen) else if HandleChunk(inst) else if HandleChunk(ibag)
+										else if HandleChunk(imod) else if HandleChunk(igen) else if HandleChunk(shdr)
+													else stream->skip(stream->data, chunk.size);
 #undef HandleChunk
 			}
 		}
@@ -1628,7 +1689,7 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 	}
 	if (!hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum || !hydra.phdrNum)
 	{
-	//if (e) *e = TSF_INVALID_INCOMPLETE;
+		//if (e) *e = TSF_INVALID_INCOMPLETE;
 	}
 //	else if (fontSamples == TSF_NULL)
 //	{
@@ -1645,12 +1706,12 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->fontSampleCount = fontSampleCount;
 		res->outSampleRate = 44100.0f;
 		res->voicesMax = 128;
-		
-		#ifdef TSF_MEM_PROF
-			printf("MALLOC struct tsf_voice %ld * %ld = %ld\n", res->voicesMax,sizeof(struct tsf_voice),res->voicesMax * sizeof(struct tsf_voice));
-		#endif
+
+#ifdef TSF_MEM_PROF
+		printf("MALLOC struct tsf_voice %ld * %ld = %ld\n", res->voicesMax, sizeof(struct tsf_voice), res->voicesMax * sizeof(struct tsf_voice));
+#endif
 		res->voices = (struct tsf_voice *)TSF_MALLOC(res->voicesMax * sizeof(struct tsf_voice));
-		for(int i = 0;i < res->voicesMax;i++)
+		for (int i = 0; i < res->voicesMax; i++)
 			res->voices[i].playingPreset = -1;
 		res->voiceNum = res->voicesMax;
 
@@ -1658,13 +1719,13 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		res->hydra = hydra;
 		res->gc = 0;
 
-		#ifndef TSF_NO_REVERB
-			tsf_reverb_setup(res, 0.0f, 0.7f, 0.7f); // default large hall
-		#endif
+#ifndef TSF_NO_REVERB
+		tsf_reverb_setup(res, 0.0f, 0.7f, 0.7f); // default large hall
+#endif
 
-		#ifndef TSF_NO_CHORUS
-			tsf_chorus_setup(res, 50.0f, 0.5f, 0.4f, 6.3f); // default chorus 3
-		#endif
+#ifndef TSF_NO_CHORUS
+		tsf_chorus_setup(res, 50.0f, 0.5f, 0.4f, 6.3f); // default chorus 3
+#endif
 
 		tsf_preload_presets(res);
 	}
@@ -1673,11 +1734,11 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 
 TSFDEF void tsf_set_max_voices(tsf* f, int max) {
 	f->voicesMax = max;
-	#ifdef TSF_MEM_PROF
-		printf("REALLOC struct tsf_voice %ld * %ld = %ld\n", f->voicesMax,sizeof(struct tsf_voice),f->voicesMax * sizeof(struct tsf_voice));
-	#endif
+#ifdef TSF_MEM_PROF
+	printf("REALLOC struct tsf_voice %ld * %ld = %ld\n", f->voicesMax, sizeof(struct tsf_voice), f->voicesMax * sizeof(struct tsf_voice));
+#endif
 	f->voices = (struct tsf_voice *)TSF_REALLOC(f->voices, f->voicesMax * sizeof(struct tsf_voice));
-	for(int i = 0;i < f->voicesMax;i++)
+	for (int i = 0; i < f->voicesMax; i++)
 		f->voices[i].playingPreset = -1;
 	f->voiceNum = f->voicesMax;
 }
@@ -1750,13 +1811,13 @@ static struct tsf_voice *tsf_reusable_voice(tsf * f, float cap) {
 	v = f->voices, vEnd = v + f->voiceNum;
 	for (; v != vEnd; v++) {
 		if ((v->ampenv.segment == TSF_SEGMENT_DECAY || v->ampenv.segment == TSF_SEGMENT_SUSTAIN || v->ampenv.segment == TSF_SEGMENT_RELEASE || v->ampenv.segment == TSF_SEGMENT_DONE))
-			if(v->locked == 0 && v->ampenv.level < minLevel) {
+			if (v->locked == 0 && v->ampenv.level < minLevel) {
 				minLevel = v->ampenv.level;
 				reuseVoice = v;
 			}
 	}
 
-	if(minLevel < cap)
+	if (minLevel < cap)
 		return reuseVoice;
 	else
 		return TSF_NULL;
@@ -1764,7 +1825,7 @@ static struct tsf_voice *tsf_reusable_voice(tsf * f, float cap) {
 
 
 TSFDEF void tsf_note_on(tsf* f, int32_t preset_index, int32_t key, float vel)
-{	
+{
 	int16_t midiVelocity = (int16_t)(vel * 127);
 	int32_t voicePlayIndex;
 	struct tsf_region *region, *regionEnd;
@@ -1863,7 +1924,7 @@ TSFDEF void tsf_gc(tsf * f) {
 		for (int32_t i = 0; i < f->presetNum; i++) {
 			if (f->presets[i].refCount == 0 && f->presets[i].loaded == TSF_TRUE) {
 #ifdef TSF_MEM_PROF
-				printf("GC unload preset %d\n",i);
+				printf("GC unload preset %d\n", i);
 #endif
 				tsf_unload_preset(f, i);
 			}
@@ -1931,26 +1992,37 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 
 	struct tsf_voice *v = f->voices, *vEnd = v + f->voiceNum;
 
-	TSF_MEMSET(f->chorusBuffer, 0, sizeof(int16_t) * samples);
-	TSF_MEMSET(f->reverbBuffer, 0, sizeof(int16_t) * samples);
+	TSF_MEMSET(f->buffer, 0, sizeof(int32_t) * samples * 2);
+	TSF_MEMSET(f->chorusBuffer, 0, sizeof(int32_t) * samples);
+	TSF_MEMSET(f->reverbBuffer, 0, sizeof(int32_t) * samples);
 
 	if (!flag_mixing) TSF_MEMSET(buffer, 0, (f->outputmode == TSF_MONO ? 1 : 2) * sizeof(int16_t) * samples);
 
 	for (; v != vEnd; v++) {
 		if (v->playingPreset != -1 && v->locked == 0) {
 			v->locked = 1;
-			tsf_voice_render(f, v, buffer, f->chorusBuffer, f->reverbBuffer, samples);
+			tsf_voice_render(f, v, f->buffer, f->chorusBuffer, f->reverbBuffer, samples);
 			v->locked = 0;
 		}
 	}
 
-	#ifndef TSF_NO_CHORUS
-		chorus_process(&f->chorus, f->chorusBuffer, buffer, samples);
-	#endif
+#ifndef TSF_NO_CHORUS
+	chorus_process(&f->chorus, f->chorusBuffer, f->buffer, samples);
+#endif
 
-	#ifndef TSF_NO_REVERB
-		reverb_process(&f->rev, f->reverbBuffer, buffer, samples);
-	#endif
+#ifndef TSF_NO_REVERB
+	reverb_process(&f->rev, f->reverbBuffer, f->buffer, samples);
+#endif
+
+	int32_t *inBuf = f->buffer;
+	int blkCnt = (samples * 2) >> 2;
+
+	while (blkCnt--) {
+		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
+		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
+		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
+		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
+	}
 }
 
 static void tsf_channel_setup_voice(tsf* f, struct tsf_voice* v)
@@ -2180,9 +2252,9 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		tsf_channel_set_pan(f, channel, 0.5f);
 		tsf_channel_set_pitchrange(f, channel, 2.0f);
 		return;
-	case 91 /* reverb */ : c->reverb = (float)control_value/127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
-	case 93 /* chorus */ : c->chorus = (float)control_value/127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-	// default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
+	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
+		// default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

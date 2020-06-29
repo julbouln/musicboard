@@ -163,7 +163,7 @@ $(TARGET).elf: $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) src/startup_$(MCU_LC).s $^ -o $@
 	$(OBJCOPY) $(TARGET).elf -O ihex $(TARGET).hex 
 	$(OBJCOPY) -Obinary $(TARGET).elf $(TARGET).bin
-	$(OBJDUMP) -M reg-names-std -sSt $(TARGET).elf >$(TARGET).lst
+	$(OBJDUMP) -drwCS $(TARGET).elf >$(TARGET).lst
 	@echo "[SIZE]    $(TARGET).elf"
 	$(SIZE) $(TARGET).elf
 

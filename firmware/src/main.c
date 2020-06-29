@@ -9,19 +9,17 @@ static void Error_Handler(void);
 static void MPU_Config(void);
 static void CPU_CACHE_Enable(void);
 
-uint8_t buf[AUDIO_BUF_SIZE];
+uint8_t global_buf[AUDIO_BUF_SIZE];
 
 void audio_init() {
   USBD_AUDIO_HandleTypeDef *haudio = (USBD_AUDIO_HandleTypeDef *)USBD_Device.pClassData[0];
   memset(haudio->buffer, 0, AUDIO_TOTAL_BUF_SIZE);
 }
 
-void audio_update(uint32_t bufpos, uint32_t bufsize) {
+void audio_update(uint8_t *buf, uint32_t bufpos, uint32_t bufsize) {
   int16_t *in = (int16_t *)audio_buffer_getptr(bufpos, bufsize);
   int16_t *out = (int16_t *)&buf[0] + bufpos / 2;
-
-//    memset(&buf[0] + bufpos, 0, bufsize);
-
+  
   int blkCnt = (bufsize / 2) >> 2;
   while (blkCnt--) {
     *out++ += *in++ >> 1;
@@ -29,18 +27,19 @@ void audio_update(uint32_t bufpos, uint32_t bufsize) {
     *out++ += *in++ >> 1;
     *out++ += *in++ >> 1;
   }
+  
 }
 
 void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
 {  
-  synth_update(buf, 0, AUDIO_BUF_SIZE/2);
-  audio_update(0, AUDIO_BUF_SIZE/2);  
+  synth_update(global_buf, 0, AUDIO_BUF_SIZE/2);
+  audio_update(global_buf, 0, AUDIO_BUF_SIZE/2);  
 }
 
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
-  synth_update(buf, AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);
-  audio_update(AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);  
+  synth_update(global_buf, AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);
+  audio_update(global_buf, AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);  
 }
 
 int main(void)
@@ -65,40 +64,11 @@ int main(void)
   setbuf(stdout, NULL);
   BSP_LED_Off(LED1);
 
-// QSPI
   QSPI_init();
   
   HAL_Delay(100);
 
   synth_init();
-
-#ifdef MUCISBOARD_USB_COMPOSITE
-  /* Make the connection and initialize to USB_OTG/usbdc_core */
-
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_Composite_ClassDriver);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-#else
-  #ifdef MUCISBOARD_USB_MIDI_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_Midi_ClassDriver);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-  #endif
-
-  #ifdef MUCISBOARD_USB_AUDIO_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_AUDIO);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-  #endif
-
-  #ifdef MUSICBOARD_USB_MSC_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_MSC);
-  USBD_MSC_RegisterStorage(&USBD_Device, &USBD_DISK_fops);
-  #endif
-#endif
-
-  USBD_Start(&USBD_Device);
 
   audio_init();
   audio_buffer_init();
@@ -106,10 +76,8 @@ int main(void)
   BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, MASTER_VOLUME, SAMPLE_RATE);
   BSP_AUDIO_OUT_SetAudioFrameSlot(CODEC_AUDIOFRAME_SLOT_02);  // PCM 2-channel
 
-  memset(buf, 0, AUDIO_BUF_SIZE);
-  BSP_AUDIO_OUT_Play((uint16_t *)&buf[0], AUDIO_BUF_SIZE);
-
-  HAL_Delay(100);
+  memset(global_buf, 0, AUDIO_BUF_SIZE);
+  BSP_AUDIO_OUT_Play((uint16_t *)&global_buf[0], AUDIO_BUF_SIZE);
 
 #if 1
   /* Prescaler declaration */
@@ -145,6 +113,33 @@ int main(void)
     Error_Handler();
   }
 #endif
+
+#ifdef MUCISBOARD_USB_COMPOSITE
+  /* Make the connection and initialize to USB_OTG/usbdc_core */
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_Composite_ClassDriver);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+#else
+  #ifdef MUCISBOARD_USB_MIDI_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_Midi_ClassDriver);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+  #endif
+
+  #ifdef MUCISBOARD_USB_AUDIO_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_AUDIO);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+  #endif
+
+  #ifdef MUSICBOARD_USB_MSC_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_MSC);
+  USBD_MSC_RegisterStorage(&USBD_Device, &USBD_DISK_fops);
+  #endif
+#endif
+
+  USBD_Start(&USBD_Device);
 
   while (1)
   {

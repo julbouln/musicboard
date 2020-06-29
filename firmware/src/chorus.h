@@ -181,7 +181,7 @@ int chorus_init(chorus_t *chorus, int rate, float delay, float decay, float spee
  * Processed signed long samples from ibuf to obuf.
  * Return number of samples processed.
  */
-int chorus_process(chorus_t *chorus, int16_t *in, int16_t *out, uint32_t samples)
+int chorus_process(chorus_t *chorus, int32_t *in, int32_t *out, uint32_t samples)
 {
 	int c;
 
@@ -190,7 +190,7 @@ int chorus_process(chorus_t *chorus, int16_t *in, int16_t *out, uint32_t samples
 	int32_t out_l, out_r;
 
 	for (c = 0; c < samples; c ++) {
-		in_m = in[c] / 4;
+		in_m = __SSAT(((in[c] >> 15)/4), 16);
 		int32_t mod_val;
 
 		if (chorus->modulation == MOD_SINE)
@@ -202,13 +202,13 @@ int chorus_process(chorus_t *chorus, int16_t *in, int16_t *out, uint32_t samples
 
 		out_m = out_m >> 15;
 
-		out_l = *out++;
-		out_r = *out++;
+		out_l = *out++ >> 15;
+		out_r = *out++ >> 15;
 
 		out-=2;
 
-		*out++ = __SSAT(out_m + out_l * 3/4, 16);
-		*out++ = __SSAT(out_m + out_r * 3/4, 16);
+		*out++ = (out_m + out_l * 3/4) << 15;
+		*out++ = (out_m + out_r * 3/4) << 15;
 
 		/* Mix decay of delay and input */
 		chorus->chorusbuf[chorus->counter] = in_m;
