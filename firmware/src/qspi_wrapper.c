@@ -5,7 +5,7 @@ uint8_t qspi_write_mode;
 uint8_t qspi_wrote;
 uint32_t qspi_last_access;
 
-#define QSPI_READWRITE_WAIT 3000
+#define QSPI_READWRITE_WAIT 2000
 
 void QSPI_init() {
   BSP_QSPI_DeInit();

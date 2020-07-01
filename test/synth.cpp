@@ -7,7 +7,7 @@
 #include <vector>
 
 //#define TSF_NO_STDIO
-#define TSF_RENDER_EFFECTSAMPLEBLOCK 64
+#define TSF_RENDER_EFFECTSAMPLEBLOCK 256
 
 #define TSF_IMPLEMENTATION
 #define TSF_NO_PRESET_NAME
@@ -15,6 +15,7 @@
 //#define TSF_NO_LOWPASS
 //#define TSF_NO_REVERB
 //#define TSF_NO_CHORUS
+
 #include "tsf.h"
 
 #include "RtAudio.h"
@@ -28,8 +29,12 @@
 
 using namespace std;
 
+#include "midi.h"
+
 void midiCallback(double deltatime, vector<uint8_t>* msg, void* userData)
 {
+  midi_process(userData, msg->data(), msg->size());
+  /*
   tsf *synth = (tsf *)userData;
 
   int chan = (*msg)[0] & 0xf;
@@ -73,6 +78,8 @@ void midiCallback(double deltatime, vector<uint8_t>* msg, void* userData)
     break;
 
   }
+  */
+  
 }
 
 int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
@@ -92,10 +99,67 @@ int audioCallback( void *outputBuffer, void *inputBuffer, unsigned int nBufferFr
 
 #include <sys/mman.h>
 
+  tsf* synth;
+
+void midi_sysex_reset(void) {
+  printf("RESET\n");
+}
+
+void midi_sysex_set_reverb_type(uint8_t rev_type) {
+  printf("SET REVERB %d\n", rev_type);
+#ifndef TSF_NO_REVERB
+  switch(rev_type) {
+    case 0:
+      tsf_reverb_setup(synth, 0.0f, 0.1f, 0.4f);
+    break;
+    case 1:
+      tsf_reverb_setup(synth, 0.0f, 0.2f, 0.5f);
+    break;
+    case 2:
+      tsf_reverb_setup(synth, 0.0f, 0.4f, 0.6f);
+    break;
+    case 3:
+      tsf_reverb_setup(synth, 0.0f, 0.6f, 0.7f);
+    break;
+    case 4:
+      tsf_reverb_setup(synth, 0.0f, 0.7f, 0.7f); // default large hall
+    break;
+    case 8:
+      tsf_reverb_setup(synth, 0.0f, 0.7f, 0.5f);
+    break;
+  }
+#endif
+}
+
+void midi_sysex_set_chorus_type(uint8_t chorus_type) {
+  printf("SET CHORUS %d\n", chorus_type);
+#ifndef TSF_NO_CHORUS
+  switch(chorus_type) {
+    case 0:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.4f, 1.9f); // default chorus 3
+    break;
+    case 1:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 1.1f, 6.3f); // default chorus 3
+    break;
+    case 2:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.4f, 6.3f); // default chorus 3
+    break;
+    case 3:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 1.1f, 5.3f); // default chorus 3
+    break;
+    case 4:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.2f, 7.8f); // default chorus 3
+    break;
+    case 5:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.1f, 1.9f); // default chorus 3
+    break;
+  }
+#endif
+}
+
 int main(int argc, char** argv)
 {
 
-  tsf* synth;
   if (argc != 2) {
     printf("Usage: synth file.sf2\n");
 
@@ -103,15 +167,17 @@ int main(int argc, char** argv)
     synth = tsf_load_filename(argv[1]);
   }
   
+  tsf_set_max_voices(synth, 256);
   tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
-
 
   RtMidiIn *midiIn = new RtMidiIn();
   if (midiIn->getPortCount() == 0) {
     std::cout << "No MIDI ports available!\n";
     exit(0);
   }
+//  std::cout << midiIn->getPortCount() << std::endl;
   midiIn->openPort(0);
+//  midiIn->openVirtualPort();
   midiIn->setCallback( &midiCallback, (void *)synth);
   midiIn->ignoreTypes( false, false, false );
 

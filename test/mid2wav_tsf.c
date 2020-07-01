@@ -16,8 +16,6 @@
 #define	BUFFER_LEN 1024
 #define SAMPLE_RATE 44100
 
-#include "chorus.h"
-
 int main(int argc, char** argv)
 {
 	double msec = 0;

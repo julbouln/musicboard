@@ -11,7 +11,7 @@ rt/RtMidi.o:
 	g++ $(CFLAGS) -std=c++11 -Irt -D__LINUX_ALSA__ -c -o rt/RtMidi.o rt/RtMidi.cpp
 
 synth: rt/RtAudio.o rt/RtMidi.o
-	g++ $(CFLAGS) -fpermissive synth.cpp -o synth $^ -lc -lm -lpthread -lasound -lpulse -lpulse-simple
+	g++ $(CFLAGS) -DTSF_SYNTH -fpermissive ../firmware/src/midi.c synth.cpp -o synth $^ -lc -lm -lpthread -lasound -lpulse -lpulse-simple
 	objdump -sSt synth >synth.lst
 
 mid2wav_efluidsynth:

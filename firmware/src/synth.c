@@ -31,6 +31,63 @@ tsf* synth = NULL;
 fluid_synth_t* synth = NULL;
 #endif
 
+/* SYSEX callbacks */
+void midi_sysex_reset(void) {
+  synth_reset();
+}
+
+#ifdef TSF_SYNTH
+void midi_sysex_set_reverb_type(uint8_t rev_type) {
+#ifndef TSF_NO_REVERB
+  switch(rev_type) {
+    case 0:
+      tsf_reverb_setup(synth, 0.0f, 0.1f, 0.4f);
+    break;
+    case 1:
+      tsf_reverb_setup(synth, 0.0f, 0.2f, 0.5f);
+    break;
+    case 2:
+      tsf_reverb_setup(synth, 0.0f, 0.4f, 0.6f);
+    break;
+    case 3:
+      tsf_reverb_setup(synth, 0.0f, 0.6f, 0.7f);
+    break;
+    case 4:
+      tsf_reverb_setup(synth, 0.0f, 0.7f, 0.7f); // default large hall
+    break;
+    case 8:
+      tsf_reverb_setup(synth, 0.0f, 0.7f, 0.5f);
+    break;
+  }
+#endif
+}
+
+void midi_sysex_set_chorus_type(uint8_t chorus_type) {
+#ifndef TSF_NO_CHORUS
+  switch(chorus_type) {
+    case 0:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.4f, 1.9f); 
+    break;
+    case 1:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 1.1f, 6.3f);
+    break;
+    case 2:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.4f, 6.3f); // default chorus 3
+    break;
+    case 3:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 1.1f, 5.3f);
+    break;
+    case 4:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.2f, 7.8f);
+    break;
+    case 5:
+    tsf_chorus_setup(synth, 50.0f, 0.5f, 0.1f, 1.9f);
+    break;
+  }
+#endif
+}
+#endif
+
 void synth_init() {
 #ifdef TSF_SYNTH
   synth = tsf_load_filename(NULL);
@@ -56,16 +113,20 @@ void synth_init() {
 
 }
 
-void synth_update(uint8_t *buf, uint32_t bufpos, uint32_t bufsize) {
-  if (synth_available()) {
-    QSPI_readonly_mode();
-    if (QSPI_wrote_get()) {
+void synth_reset() {
 #ifdef TSF_SYNTH
       tsf_close(synth);
 #else
       delete_fluid_synth(synth);
 #endif
       synth_init();
+}
+
+void synth_update(uint8_t *buf, uint32_t bufpos, uint32_t bufsize) {
+  if (synth_available()) {
+    QSPI_readonly_mode();
+    if (QSPI_wrote_get()) {
+      synth_reset();
       QSPI_wrote_clear();
     }
 #ifdef TSF_SYNTH

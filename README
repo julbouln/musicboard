@@ -38,7 +38,8 @@ SF2 fonts tested:
 Default make for STM32F746-DISCO board, use "make BOARD=MUSICBOARD" for custom board firmware.
 
 TODO:
-- bug: USB Audio asynchronous feedback does not seems to work in USB composite mode
+- bug: synthesis sometimes make a "click" noise
+- bug: USB Audio asynchronous feedback does not work
 - feature: TinySoundFont does not fully implement SF2 (modulators)
 - feature: USB-MIDI to MIDI interface (add MIDI-IN and MIDI-OUT)
 - feature: Audio IN

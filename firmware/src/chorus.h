@@ -183,13 +183,11 @@ int chorus_init(chorus_t *chorus, int rate, float delay, float decay, float spee
  */
 int chorus_process(chorus_t *chorus, int32_t *in, int32_t *out, uint32_t samples)
 {
-	int c;
-
 	int16_t in_m = 0;
 	int32_t out_m = 0;
 	int32_t out_l, out_r;
 
-	for (c = 0; c < samples; c ++) {
+	for (uint32_t c = 0; c < samples; c ++) {
 		in_m = __SSAT(((in[c] >> 15)/4), 16);
 		int32_t mod_val;
 

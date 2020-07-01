@@ -536,11 +536,11 @@ struct tsf_hydra_shdr { tsf_char20 sampleName; tsf_u32 start, end, startLoop, en
 #define TSFR(FIELD) stream->read(stream->data, &i->FIELD, sizeof(i->FIELD));
 static void tsf_hydra_read_phdr(struct tsf_hydra_phdr* i, struct tsf_stream* stream) { TSFR(presetName) TSFR(preset) TSFR(bank) TSFR(presetBagNdx) TSFR(library) TSFR(genre) TSFR(morphology) }
 static void tsf_hydra_read_pbag(struct tsf_hydra_pbag* i, struct tsf_stream* stream) { TSFR(genNdx) TSFR(modNdx) }
-static void tsf_hydra_read_pmod(struct tsf_hydra_pmod* i, struct tsf_stream* stream) { TSFR(modSrcOper) TSFR(modDestOper) TSFR(modAmount) TSFR(modAmtSrcOper) TSFR(modTransOper) }
+//static void tsf_hydra_read_pmod(struct tsf_hydra_pmod* i, struct tsf_stream* stream) { TSFR(modSrcOper) TSFR(modDestOper) TSFR(modAmount) TSFR(modAmtSrcOper) TSFR(modTransOper) }
 static void tsf_hydra_read_pgen(struct tsf_hydra_pgen* i, struct tsf_stream* stream) { TSFR(genOper) TSFR(genAmount) }
 static void tsf_hydra_read_inst(struct tsf_hydra_inst* i, struct tsf_stream* stream) { TSFR(instName) TSFR(instBagNdx) }
 static void tsf_hydra_read_ibag(struct tsf_hydra_ibag* i, struct tsf_stream* stream) { TSFR(instGenNdx) TSFR(instModNdx) }
-static void tsf_hydra_read_imod(struct tsf_hydra_imod* i, struct tsf_stream* stream) { TSFR(modSrcOper) TSFR(modDestOper) TSFR(modAmount) TSFR(modAmtSrcOper) TSFR(modTransOper) }
+//static void tsf_hydra_read_imod(struct tsf_hydra_imod* i, struct tsf_stream* stream) { TSFR(modSrcOper) TSFR(modDestOper) TSFR(modAmount) TSFR(modAmtSrcOper) TSFR(modTransOper) }
 static void tsf_hydra_read_igen(struct tsf_hydra_igen* i, struct tsf_stream* stream) { TSFR(genOper) TSFR(genAmount) }
 static void tsf_hydra_read_shdr(struct tsf_hydra_shdr* i, struct tsf_stream* stream) { TSFR(sampleName) TSFR(start) TSFR(end) TSFR(startLoop) TSFR(endLoop) TSFR(sampleRate) TSFR(originalPitch) TSFR(pitchCorrection) TSFR(sampleLink) TSFR(sampleType) }
 #undef TSFR
@@ -600,7 +600,6 @@ struct tsf_channel
 	uint16_t presetIndex, bank, pitchWheel, midiPan, midiVolume, midiExpression, midiRPN, midiData;
 	float reverb, chorus;
 	float panOffset, gainDB, pitchRange, tuning;
-	int16_t buffer[TSF_RENDER_EFFECTSAMPLEBLOCK];
 };
 
 struct tsf_channels
@@ -1299,7 +1298,6 @@ static void tsf_voice_lowpass_setup(struct tsf_voice_lowpass* e, float Fc)
 
 static int32_t tsf_voice_lowpass_process(struct tsf_voice_lowpass* e, int32_t in)
 {
-	int32_t in0, in1, in2;
 	int32_t out;
 	out = (e->a0 * in + e->z1) >> 15;
 	e->z1 = (e->a1 * in) + e->z2 - (e->b1 * out);
@@ -1421,8 +1419,8 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 		if (dynamicGain)
 			noteGain = tsf_decibelsToGain(v->noteGainDB + (v->modlfo.level * tmpModLfoToVolume));
 
-		gainMono = noteGain * v->ampenv.level * 0.5f; // FIXME x 0.5 needed to avoid saturation with int32_t buf
-
+		gainMono = noteGain * v->ampenv.level;
+		
 		// Update EG.
 		tsf_voice_envelope_process(&v->ampenv, blockSamples, tmpSampleRate);
 		if (updateModEnv) tsf_voice_envelope_process(&v->modenv, blockSamples, tmpSampleRate);
@@ -1451,7 +1449,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 
 		int32_t samplesBuf[TSF_RENDER_EFFECTSAMPLEBLOCK];
 		int32_t *buf = samplesBuf;
-		int32_t in0, in1, in2, in3;
+		int32_t in0, in1;
 		int32_t out0, out1, out2, out3;
 
 		int blkCnt, blckRemain;
@@ -1577,6 +1575,9 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 
 			output -= 2;
 
+			*output++ = out0;
+			*output++ = out1;
+
 			out0 = (int32_t) * fxChorusBuf++;
 			out0 = __SMLABB(in0, gainEffect, out0);
 			fxChorusBuf -= 1;
@@ -1606,20 +1607,6 @@ Size adjusts the size of the "room", and to an extent its shape.
 Decay adjusts the feedback trim through the comb filters.
 */
 TSFDEF void tsf_reverb_setup(tsf* f, float colour, float size, float decay) {
-	if (colour < -6.0f)
-		colour = -6.0f;
-	if (colour > 6.0f)
-		colour = 6.0f;
-	if (size < 0.1f)
-		size = 0.1f;
-	if (size > 1.0f)
-		size = 1.0f;
-
-	if (decay < 0.0f)
-		decay = 0.0f;
-	if (decay > 1.0)
-		decay = 1.0f;
-
 	reverb_init(&f->rev);
 	reverb_set_colour(&f->rev, colour);
 	reverb_set_size(&f->rev, size);
@@ -2254,7 +2241,7 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		return;
 	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
 	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-		// default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	//	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:
