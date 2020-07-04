@@ -2293,7 +2293,7 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		return;
 	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
 	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-	default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	// default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:
