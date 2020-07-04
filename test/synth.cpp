@@ -167,7 +167,7 @@ int main(int argc, char** argv)
     synth = tsf_load_filename(argv[1]);
   }
   
-  tsf_set_max_voices(synth, 256);
+  tsf_set_max_voices(synth, 64);
   tsf_set_output(synth, TSF_STEREO_INTERLEAVED, SAMPLE_RATE, 0.0f);
 
   RtMidiIn *midiIn = new RtMidiIn();

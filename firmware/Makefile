@@ -113,7 +113,8 @@ CFLAGS     = -Wall -g -std=c99 -O3
 CFLAGS += -mcpu=cortex-m7 -mlittle-endian
 CFLAGS += -mfloat-abi=hard -mfpu=fpv5-sp-d16
 CFLAGS += -mthumb 
-CFLAGS += -ftree-vectorize -ffast-math -fsingle-precision-constant
+CFLAGS += -ffast-math -fsingle-precision-constant
+CFLAGS += -ftree-vectorize 
 CFLAGS += -fno-schedule-insns -fno-schedule-insns2 # gcc do something wrong with inline assembly
 #CFLAGS += -fconserve-stack -mno-sched-prolog
 

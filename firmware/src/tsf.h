@@ -339,6 +339,30 @@ __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULBB(uint32_t op
 	return (result);
 }
 
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULBT(uint32_t op1, uint32_t op2)
+{
+	uint32_t result;
+
+	__ASM volatile ("smulbt %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
+	return (result);
+}
+
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULTB(uint32_t op1, uint32_t op2)
+{
+	uint32_t result;
+
+	__ASM volatile ("smultb %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
+	return (result);
+}
+
+__attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMULTT(uint32_t op1, uint32_t op2)
+{
+	uint32_t result;
+
+	__ASM volatile ("smultt %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
+	return (result);
+}
+
 __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __SMLABB (uint32_t op1, uint32_t op2, uint32_t op3)
 {
 	uint32_t result;
@@ -385,6 +409,11 @@ static int32_t __SSAT(int32_t x, int32_t y)
 	else return (int32_t)x;
 }
 
+static inline uint32_t __QADD(uint32_t x, uint32_t y)
+{
+	return (uint32_t)__SSAT((int64_t)x + (int64_t)y, 32);
+}
+
 static inline uint32_t __SMUAD(uint32_t x, uint32_t y)
 {
 	return ((uint32_t)(((((int32_t)x << 16) >> 16) * (((int32_t)y << 16) >> 16)) +
@@ -399,6 +428,18 @@ static inline uint32_t __SMUSD(uint32_t x, uint32_t y)
 
 static inline int32_t __SMULBB(int32_t x, int32_t y) {
 	return ((int32_t)((int16_t) (x & 0xFFFF)) * (int32_t)((int16_t) (y & 0xFFFF)));
+}
+
+static inline int32_t __SMULBT(int32_t x, int32_t y) {
+	return ((int32_t)((int16_t) (x & 0xFFFF)) * (int32_t)((int16_t) ((y >> 16) & 0xFFFF)));
+}
+
+static inline int32_t __SMULTB(int32_t x, int32_t y) {
+	return ((int32_t)((int16_t) ((x >> 16) & 0xFFFF)) * (int32_t)((int16_t) (y & 0xFFFF)));
+}
+
+static inline int32_t __SMULTT(int32_t x, int32_t y) {
+	return ((int32_t)((int16_t) ((x >> 16) & 0xFFFF)) * (int32_t)((int16_t) ((y >> 16) & 0xFFFF)));
 }
 
 static inline int32_t __SMLABB(int32_t x, int32_t y, int32_t z) {
@@ -1355,6 +1396,38 @@ static void tsf_voice_calcpitchratio(struct tsf_voice* v, float pitchShift, floa
 	v->pitchOutputFactor = v->region->sample_rate / (tsf_timecents2Secsf(v->region->pitch_keycenter * 100.0) * outSampleRate);
 }
 
+static void tsf_voice_render_lowpass(struct tsf_voice_lowpass *e, int32_t *buf, uint32_t samples) {
+	if (e->active) {
+		int32_t in0, in1;
+		int32_t out0, out1;
+
+		int blkCnt = (samples) >> 1;
+
+		while (blkCnt--)
+		{
+			in0 = *buf++;
+			in1 = *buf++;
+
+			out0 = tsf_voice_lowpass_process(e, in0);
+			out1 = tsf_voice_lowpass_process(e, in1);
+
+			buf -= 2;
+
+			*buf++ = __SSAT(out0, 16);
+			*buf++ = __SSAT(out1, 16);
+		}
+
+		blkCnt = (samples) >> 1;
+		if ((samples) - (blkCnt << 1) ) {
+			in0 = *buf++;
+			out0 = tsf_voice_lowpass_process(e, in0);
+			buf -= 1;
+			*buf++ = __SSAT(out0, 16);
+		}
+
+	}
+}
+
 static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer, int32_t *chorusBuffer, int32_t *reverbBuffer, int32_t numSamples)
 {
 	struct tsf_region* region = v->region;
@@ -1419,8 +1492,8 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 		if (dynamicGain)
 			noteGain = tsf_decibelsToGain(v->noteGainDB + (v->modlfo.level * tmpModLfoToVolume));
 
-		gainMono = noteGain * v->ampenv.level;
-		
+		gainMono = noteGain * v->ampenv.level * 0.75f; // fix saturation problem
+
 		// Update EG.
 		tsf_voice_envelope_process(&v->ampenv, blockSamples, tmpSampleRate);
 		if (updateModEnv) tsf_voice_envelope_process(&v->modenv, blockSamples, tmpSampleRate);
@@ -1449,12 +1522,13 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 
 		int32_t samplesBuf[TSF_RENDER_EFFECTSAMPLEBLOCK];
 		int32_t *buf = samplesBuf;
-		int32_t in0, in1;
+		int32_t in0, in1, in2, in3;
 		int32_t out0, out1, out2, out3;
 
 		int blkCnt, blckRemain;
 
 		blkCnt = blockSamples;
+		int samples;
 
 		while (blkCnt-- && tmpSourceSamplePosition < tmpSampleEndDbl)
 		{
@@ -1477,41 +1551,18 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 			if (isLooping && tmpSourceSamplePosition >= tmpLoopEndDbl) tmpSourceSamplePosition -= ((uint64_t)(tmpLoopEnd - tmpLoopStart + 1)) << 32;
 		}
 
-		blckRemain = blkCnt + 1; // some blocks are skipped
+		blckRemain = blkCnt + 1; // some samples are skipped
+
+		samples = blockSamples - blckRemain;
 
 #ifndef TSF_NO_LOWPASS
-		if (tmpLowpass.active) {
-			buf = samplesBuf;
-			blkCnt = (blockSamples - blckRemain) >> 1;
-
-			while (blkCnt--)
-			{
-				in0 = *buf++;
-				in1 = *buf++;
-
-				out0 = tsf_voice_lowpass_process(&tmpLowpass, in0);
-				out1 = tsf_voice_lowpass_process(&tmpLowpass, in1);
-
-				buf -= 2;
-
-				*buf++ = __SSAT(out0, 16);
-				*buf++ = __SSAT(out1, 16);
-			}
-
-			blkCnt = (blockSamples - blckRemain) >> 1;
-			if ((blockSamples - blckRemain) - (blkCnt << 1) ) {
-				in0 = *buf++;
-				out0 = tsf_voice_lowpass_process(&tmpLowpass, in0);
-				buf -= 1;
-				*buf++ = __SSAT(out0, 16);
-			}
-
-		}
-
+		buf = samplesBuf;
+		tsf_voice_render_lowpass(&tmpLowpass, buf, samples);
 #endif
 
+#if 1
 		buf = samplesBuf;
-		blkCnt = (blockSamples - blckRemain) >> 1;
+		blkCnt = (samples) >> 1;
 		while (blkCnt--)
 		{
 			in0 = __PKHBT(buf[0], buf[1], 16);
@@ -1562,8 +1613,8 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 		}
 
 		// remaining sample
-		blkCnt = (blockSamples - blckRemain) >> 1;
-		if ((blockSamples - blckRemain) - (blkCnt << 1) ) {
+		blkCnt = (samples) >> 1;
+		if ((samples) - (blkCnt << 1) ) {
 			in0 = __PKHBT(buf[0], buf[0], 16);
 			buf += 1;
 
@@ -1588,7 +1639,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 			fxRevBuf -= 1;
 			*fxRevBuf++ = out1;
 		}
-
+#endif
 		if (tmpSourceSamplePosition >= tmpSampleEndDbl || v->ampenv.segment == TSF_SEGMENT_DONE)
 		{
 			tsf_voice_kill(v);
@@ -2004,6 +2055,7 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 	int32_t *inBuf = f->buffer;
 	int blkCnt = (samples * 2) >> 2;
 
+	// convert to 16bits
 	while (blkCnt--) {
 		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
 		*buffer++ = __SSAT(*inBuf++ >> 15, 16);
@@ -2241,7 +2293,7 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		return;
 	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
 	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-	//	 default: printf("UNKNOWN CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

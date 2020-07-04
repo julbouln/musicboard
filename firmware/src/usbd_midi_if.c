@@ -23,7 +23,7 @@ USBD_Midi_ItfTypeDef USBD_Midi_fops = {
 
 static int8_t Midi_Receive(uint8_t *msg, uint32_t len) {
 	if (synth_available()) {
-		midi_process(msg, len);
+		midi_process(synth, msg, len);
 	}
 
 	return 0;

@@ -175,7 +175,8 @@ uint8_t BSP_QSPI_Init(void)
   BSP_QSPI_MspInit(&QSPIHandle, NULL);
 
   /* QSPI initialization */
-  QSPIHandle.Init.ClockPrescaler     = 3; /* QSPI freq = 216 MHz/(1+1) = 108 Mhz */
+  /* FIXME: hardware problem, noise > 54mhz ? */
+  QSPIHandle.Init.ClockPrescaler     = 3; /* QSPI freq = 216 MHz/(1+3) = 54 Mhz */
   QSPIHandle.Init.FifoThreshold      = 1;
   QSPIHandle.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
   QSPIHandle.Init.FlashSize          = POSITION_VAL(S25FL256_FLASH_SIZE) - 1;

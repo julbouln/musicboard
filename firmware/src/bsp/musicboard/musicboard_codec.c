@@ -147,7 +147,11 @@ uint32_t wm8731_Init(uint16_t DeviceAddr, uint16_t OutputInputDevice, uint8_t Vo
   /* Initialize the Control interface of the Audio Codec */
   AUDIO_IO_Init();
 
+  HAL_Delay(10);
+
   CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x0f, 0b000000000); // Reset!
+
+  HAL_Delay(10);
 
   CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x00, 0x100 | (0x17 & 0x1f)); // Left line in, unmute
   CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x01, 0x100 | (0x17 & 0x1f)); // right line in, unmute
