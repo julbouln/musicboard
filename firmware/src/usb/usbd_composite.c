@@ -548,6 +548,8 @@ uint8_t  *USBD_Composite_DeviceQualifierDescriptor (uint16_t *length)
   */
 static uint8_t  USBD_Composite_DataIn (USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
+//      return (USBD_AUDIO_DataIn(pdev, epnum));
+#if 1
   switch(epnum|0x80) {
     case AUDIO_FEEDBACK_EP:
       return (USBD_AUDIO_DataIn(pdev, epnum));
@@ -561,7 +563,7 @@ static uint8_t  USBD_Composite_DataIn (USBD_HandleTypeDef *pdev, uint8_t epnum)
       break;
 #endif
   }
-
+#endif
   return USBD_FAIL;
 }
 
@@ -608,14 +610,15 @@ static uint8_t  USBD_Composite_SOF (USBD_HandleTypeDef *pdev)
   */
 static uint8_t  USBD_Composite_IsoINIncomplete (USBD_HandleTypeDef *pdev, uint8_t epnum)
 {
-
+  USBD_AUDIO_IsoINIncomplete(pdev, epnum);
+#if 0
   switch(epnum|0x80) {
     case AUDIO_FEEDBACK_EP:
       return (USBD_AUDIO_IsoINIncomplete(pdev, epnum));
       break;
     break;
   }
-
+#endif
   return USBD_OK;
 }
 /**

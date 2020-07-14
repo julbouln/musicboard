@@ -37,6 +37,10 @@ void midi_sysex_reset(void) {
 }
 
 #ifdef TSF_SYNTH
+void midi_sysex_set_master_volume(uint8_t vol) {
+  synth_set_volume((float)vol/127.0f);
+}
+
 void midi_sysex_set_reverb_type(uint8_t rev_type) {
 #ifndef TSF_NO_REVERB
   switch(rev_type) {
@@ -120,6 +124,12 @@ void synth_reset() {
       delete_fluid_synth(synth);
 #endif
       synth_init();
+}
+
+void synth_set_volume(float vol) {
+#ifdef TSF_SYNTH
+  tsf_set_volume(synth, vol);
+#endif
 }
 
 void synth_update(uint8_t *buf, uint32_t bufpos, uint32_t bufsize) {

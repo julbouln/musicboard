@@ -64,8 +64,8 @@
   */
 typedef enum 
 {
-LED1 = 0,
-LED_GREEN = LED1,
+  LED1 = 0,
+  LED2 = 1
 }Led_TypeDef;
 
 typedef enum 
@@ -92,12 +92,17 @@ typedef enum
   * @{
   */
 
-#define LEDn                             ((uint8_t)1)
+#define LEDn                             ((uint8_t)2)
 
 #define LED1_GPIO_PORT                   GPIOA
 #define LED1_GPIO_CLK_ENABLE()           __HAL_RCC_GPIOA_CLK_ENABLE()
 #define LED1_GPIO_CLK_DISABLE()          __HAL_RCC_GPIOA_CLK_DISABLE()
 #define LED1_PIN                         GPIO_PIN_15
+
+#define LED2_GPIO_PORT                   GPIOC
+#define LED2_GPIO_CLK_ENABLE()           __HAL_RCC_GPIOC_CLK_ENABLE()
+#define LED2_GPIO_CLK_DISABLE()          __HAL_RCC_GPIOC_CLK_DISABLE()
+#define LED2_PIN                         GPIO_PIN_12
 
 /**
   * @}
@@ -126,32 +131,32 @@ typedef enum
 /**
  * @brief Definition for COM port1, connected to USART1
  */ 
-#define DISCOVERY_COM1                          USART6
-#define DISCOVERY_COM1_CLK_ENABLE()             __HAL_RCC_USART6_CLK_ENABLE()
-#define DISCOVERY_COM1_CLK_DISABLE()            __HAL_RCC_USART6_CLK_DISABLE()
+#define MIDI_COM1                          USART6
+#define MIDI_COM1_CLK_ENABLE()             __HAL_RCC_USART6_CLK_ENABLE()
+#define MIDI_COM1_CLK_DISABLE()            __HAL_RCC_USART6_CLK_DISABLE()
 
-#define DISCOVERY_COM1_TX_PIN                   GPIO_PIN_6
-#define DISCOVERY_COM1_TX_GPIO_PORT             GPIOC
-#define DISCOVERY_COM1_TX_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOC_CLK_ENABLE()
-#define DISCOVERY_COM1_TX_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOC_CLK_DISABLE()
-#define DISCOVERY_COM1_TX_AF                    GPIO_AF8_USART6
+#define MIDI_COM1_TX_PIN                   GPIO_PIN_6
+#define MIDI_COM1_TX_GPIO_PORT             GPIOC
+#define MIDI_COM1_TX_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOC_CLK_ENABLE()
+#define MIDI_COM1_TX_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOC_CLK_DISABLE()
+#define MIDI_COM1_TX_AF                    GPIO_AF8_USART6
 
-#define DISCOVERY_COM1_RX_PIN                   GPIO_PIN_7
-#define DISCOVERY_COM1_RX_GPIO_PORT             GPIOC
-#define DISCOVERY_COM1_RX_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOC_CLK_ENABLE()
-#define DISCOVERY_COM1_RX_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOC_CLK_DISABLE()
-#define DISCOVERY_COM1_RX_AF                    GPIO_AF8_USART6
+#define MIDI_COM1_RX_PIN                   GPIO_PIN_7
+#define MIDI_COM1_RX_GPIO_PORT             GPIOC
+#define MIDI_COM1_RX_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOC_CLK_ENABLE()
+#define MIDI_COM1_RX_GPIO_CLK_DISABLE()    __HAL_RCC_GPIOC_CLK_DISABLE()
+#define MIDI_COM1_RX_AF                    GPIO_AF8_USART6
 
-#define DISCOVERY_COM1_IRQn                     USART6_IRQn
+#define MIDI_COM1_IRQn                     USART6_IRQn
 
-#define DISCOVERY_COMx_CLK_ENABLE(__INDEX__)            do { if((__INDEX__) == COM1) DISCOVERY_COM1_CLK_ENABLE(); } while(0)
-#define DISCOVERY_COMx_CLK_DISABLE(__INDEX__)           (((__INDEX__) == 0) ? DISCOVERY_COM1_CLK_DISABLE() : 0)
+#define MIDI_COMx_CLK_ENABLE(__INDEX__)            do { if((__INDEX__) == COM1) MIDI_COM1_CLK_ENABLE(); } while(0)
+#define MIDI_COMx_CLK_DISABLE(__INDEX__)           (((__INDEX__) == 0) ? MIDI_COM1_CLK_DISABLE() : 0)
 
-#define DISCOVERY_COMx_TX_GPIO_CLK_ENABLE(__INDEX__)    do { if((__INDEX__) == COM1) DISCOVERY_COM1_TX_GPIO_CLK_ENABLE(); } while(0)
-#define DISCOVERY_COMx_TX_GPIO_CLK_DISABLE(__INDEX__)   (((__INDEX__) == 0) ? DISCOVERY_COM1_TX_GPIO_CLK_DISABLE() : 0)
+#define MIDI_COMx_TX_GPIO_CLK_ENABLE(__INDEX__)    do { if((__INDEX__) == COM1) MIDI_COM1_TX_GPIO_CLK_ENABLE(); } while(0)
+#define MIDI_COMx_TX_GPIO_CLK_DISABLE(__INDEX__)   (((__INDEX__) == 0) ? MIDI_COM1_TX_GPIO_CLK_DISABLE() : 0)
 
-#define DISCOVERY_COMx_RX_GPIO_CLK_ENABLE(__INDEX__)    do { if((__INDEX__) == COM1) DISCOVERY_COM1_RX_GPIO_CLK_ENABLE(); } while(0)
-#define DISCOVERY_COMx_RX_GPIO_CLK_DISABLE(__INDEX__)   (((__INDEX__) == 0) ? DISCOVERY_COM1_RX_GPIO_CLK_DISABLE() : 0)
+#define MIDI_COMx_RX_GPIO_CLK_ENABLE(__INDEX__)    do { if((__INDEX__) == COM1) MIDI_COM1_RX_GPIO_CLK_ENABLE(); } while(0)
+#define MIDI_COMx_RX_GPIO_CLK_DISABLE(__INDEX__)   (((__INDEX__) == 0) ? MIDI_COM1_RX_GPIO_CLK_DISABLE() : 0)
 
 /* Exported constant IO ------------------------------------------------------*/
 

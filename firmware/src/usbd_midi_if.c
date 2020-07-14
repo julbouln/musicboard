@@ -22,6 +22,10 @@ USBD_Midi_ItfTypeDef USBD_Midi_fops = {
 };
 
 static int8_t Midi_Receive(uint8_t *msg, uint32_t len) {
+  #ifdef LED2_PIN
+    BSP_LED_Toggle(LED2);
+  #endif
+
 	if (synth_available()) {
 		midi_process(synth, msg, len);
 	}

@@ -10,9 +10,14 @@
 
 #include "midi.h"
 
+//#define SYSEX_DEBUG
+
 struct midi_sysex sysex;
 
 __attribute__((weak)) void midi_sysex_reset(void) {
+}
+
+__attribute__((weak)) void midi_sysex_set_master_volume(uint8_t vol) {
 }
 
 __attribute__((weak)) void midi_sysex_set_reverb_type(uint8_t rev_type) {
@@ -21,15 +26,29 @@ __attribute__((weak)) void midi_sysex_set_reverb_type(uint8_t rev_type) {
 __attribute__((weak)) void midi_sysex_set_chorus_type(uint8_t chorus_type) {
 }
 
-void midi_sysex_roland_process(struct midi_roland_sysex *man_sysex) {
+void midi_sysex_universal_process(struct midi_universal_sysex *man_sysex) {
 	switch (man_sysex->addr) {
-	case SYSEX_ROLAND_RESET:
+	case SYSEX_UNIVERSAL_RESET:
 		midi_sysex_reset();
 		break;
-	case SYSEX_ROLAND_SET_REVERB_TYPE:
+	case SYSEX_UNIVERSAL_SET_MASTER_VOLUME:
+		midi_sysex_set_master_volume(man_sysex->data & 0xFF);
+		break;
+	}
+}
+
+void midi_sysex_gs_process(struct midi_gs_sysex *man_sysex) {
+	switch (man_sysex->addr) {
+	case SYSEX_GS_RESET:
+		midi_sysex_reset();
+		break;
+	case SYSEX_GS_SET_MASTER_VOLUME:
+		midi_sysex_set_master_volume(man_sysex->data);
+		break;
+	case SYSEX_GS_SET_REVERB_TYPE:
 		midi_sysex_set_reverb_type(man_sysex->data);
 		break;
-	case SYSEX_ROLAND_SET_CHORUS_TYPE:
+	case SYSEX_GS_SET_CHORUS_TYPE:
 		midi_sysex_set_chorus_type(man_sysex->data);
 		break;
 	}
@@ -37,9 +56,28 @@ void midi_sysex_roland_process(struct midi_roland_sysex *man_sysex) {
 
 void midi_sysex_end_process() {
 	switch (sysex.manufacturer) {
+	case SYSEX_MANUFACTURER_UNIVERSAL_NONREALTIME:
+	case SYSEX_MANUFACTURER_UNIVERSAL_REALTIME:
+	{
+		struct midi_universal_sysex *man_sysex = (struct midi_universal_sysex *)malloc(sizeof(struct midi_universal_sysex));
+		man_sysex->addr = sysex.data[1] << 8 | sysex.data[2];
+		if (sysex.data[3] != 0xF7) {
+			man_sysex->data = sysex.data[3] << 8 | sysex.data[4];
+		} else {
+			man_sysex->data = 0;
+		}
+		sysex.manufacturer_data = man_sysex;
+#ifdef SYSEX_DEBUG
+		printf("UNIVERSAL SYSEX addr:%x data:%x\n",
+		       man_sysex->addr, man_sysex->data
+		      );
+#endif
+		midi_sysex_universal_process(man_sysex);
+	}
+	break;
 	case SYSEX_MANUFACTURER_ROLAND:
 		if (sysex.data[1] == SYSEX_ROLAND_MODEL_GS) {
-			struct midi_roland_sysex *man_sysex = (struct midi_roland_sysex *)malloc(sizeof(struct midi_roland_sysex));
+			struct midi_gs_sysex *man_sysex = (struct midi_gs_sysex *)malloc(sizeof(struct midi_gs_sysex));
 			man_sysex->device_id = sysex.data[0];
 			man_sysex->model_id = sysex.data[1];
 			man_sysex->command_id = sysex.data[2];
@@ -47,14 +85,13 @@ void midi_sysex_end_process() {
 			man_sysex->data = sysex.data[6];
 			man_sysex->checksum = sysex.data[7];
 			sysex.manufacturer_data = man_sysex;
-
-			midi_sysex_roland_process(man_sysex);
-			/*
-						printf("ROLAND SYSEX device_id:%x model_id:%x command_id:%x addr:%x data:%x checksum:%x\n",
-						       man_sysex->device_id, man_sysex->model_id, man_sysex->command_id,
-						       man_sysex->addr, man_sysex->data, man_sysex->checksum
-						      );
-			*/
+#ifdef SYSEX_DEBUG
+			printf("GS SYSEX device_id:%x model_id:%x command_id:%x addr:%x data:%x checksum:%x\n",
+			       man_sysex->device_id, man_sysex->model_id, man_sysex->command_id,
+			       man_sysex->addr, man_sysex->data, man_sysex->checksum
+			      );
+#endif
+			midi_sysex_gs_process(man_sysex);
 		}
 		break;
 	}
@@ -150,12 +187,13 @@ void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
 #if 1
 	midi_sysex_process(msg, len);
 	if (sysex.ended == 1) {
-		/*		printf("SYSEX (processed) manufacturer:%x len:%d data:", sysex.manufacturer, sysex.len);
-				for (int i = 0; i < sysex.len; i++) {
-					printf("%x ", sysex.data[i]);
-				}
-				printf("\n");
-				*/
+#ifdef SYSEX_DEBUG
+		printf("SYSEX (processed) manufacturer:%x len:%d data:", sysex.manufacturer, sysex.len);
+		for (int i = 0; i < sysex.len; i++) {
+			printf("%x ", sysex.data[i]);
+		}
+		printf("\n");
+#endif
 		if (sysex.manufacturer_data) {
 			free(sysex.manufacturer_data);
 		}

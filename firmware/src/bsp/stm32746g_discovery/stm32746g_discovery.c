@@ -102,19 +102,19 @@ const uint16_t BUTTON_IRQn[BUTTONn] = {WAKEUP_BUTTON_EXTI_IRQn,
                                        TAMPER_BUTTON_EXTI_IRQn,
                                        KEY_BUTTON_EXTI_IRQn};
 
-USART_TypeDef* COM_USART[COMn] = {DISCOVERY_COM1};
+USART_TypeDef* COM_USART[COMn] = {MIDI_COM1};
 
-GPIO_TypeDef* COM_TX_PORT[COMn] = {DISCOVERY_COM1_TX_GPIO_PORT};
+GPIO_TypeDef* COM_TX_PORT[COMn] = {MIDI_COM1_TX_GPIO_PORT};
 
-GPIO_TypeDef* COM_RX_PORT[COMn] = {DISCOVERY_COM1_RX_GPIO_PORT};
+GPIO_TypeDef* COM_RX_PORT[COMn] = {MIDI_COM1_RX_GPIO_PORT};
 
-const uint16_t COM_TX_PIN[COMn] = {DISCOVERY_COM1_TX_PIN};
+const uint16_t COM_TX_PIN[COMn] = {MIDI_COM1_TX_PIN};
 
-const uint16_t COM_RX_PIN[COMn] = {DISCOVERY_COM1_RX_PIN};
+const uint16_t COM_RX_PIN[COMn] = {MIDI_COM1_RX_PIN};
 
-const uint16_t COM_TX_AF[COMn] = {DISCOVERY_COM1_TX_AF};
+const uint16_t COM_TX_AF[COMn] = {MIDI_COM1_TX_AF};
 
-const uint16_t COM_RX_AF[COMn] = {DISCOVERY_COM1_RX_AF};
+const uint16_t COM_RX_AF[COMn] = {MIDI_COM1_RX_AF};
 
 static I2C_HandleTypeDef hI2cAudioHandler = {0};
 static I2C_HandleTypeDef hI2cExtHandler = {0};
@@ -397,11 +397,11 @@ void BSP_COM_Init(COM_TypeDef COM, UART_HandleTypeDef *huart)
   GPIO_InitTypeDef gpio_init_structure;
 
   /* Enable GPIO clock */
-  DISCOVERY_COMx_TX_GPIO_CLK_ENABLE(COM);
-  DISCOVERY_COMx_RX_GPIO_CLK_ENABLE(COM);
+  MIDI_COMx_TX_GPIO_CLK_ENABLE(COM);
+  MIDI_COMx_RX_GPIO_CLK_ENABLE(COM);
 
   /* Enable USART clock */
-  DISCOVERY_COMx_CLK_ENABLE(COM);
+  MIDI_COMx_CLK_ENABLE(COM);
 
   /* Configure USART Tx as alternate function */
   gpio_init_structure.Pin = COM_TX_PIN[COM];
@@ -439,7 +439,7 @@ void BSP_COM_DeInit(COM_TypeDef COM, UART_HandleTypeDef *huart)
   HAL_UART_DeInit(huart);
 
   /* Enable USART clock */
-  DISCOVERY_COMx_CLK_DISABLE(COM);
+  MIDI_COMx_CLK_DISABLE(COM);
 
   /* DeInit GPIO pins can be done in the application 
      (by surcharging this __weak function) */

@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
+
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Common Config */

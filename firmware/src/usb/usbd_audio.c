@@ -110,6 +110,9 @@ EndBSPDependencies */
 // Async ISOC
 static volatile  uint16_t SOF_num=0;
 
+volatile uint32_t tx_flag = 1;
+volatile uint32_t fnsof = 0;
+
 /** @defgroup USBD_AUDIO_Private_FunctionPrototypes
   * @{
   */
@@ -618,9 +621,11 @@ uint8_t USBD_AUDIO_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
   if (epnum == (AUDIO_FEEDBACK_EP&0x7f))
   {  
 
-      haudio->feedback_val = audio_buffer_getfeedback();
-      USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)(&haudio->feedback_val), 3);
-
+    tx_flag = 0;
+#ifdef USB_AUDIO_ASYNC_ENABLE
+//      haudio->feedback_val = audio_buffer_getfeedback();
+//      USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)(&haudio->feedback_val), 3);
+#endif
   }
 
   return USBD_OK;
@@ -688,6 +693,10 @@ uint8_t USBD_AUDIO_EP0_TxReady(USBD_HandleTypeDef *pdev)
   * @param  pdev: device instance
   * @retval status
   */
+
+#define AUDIO_FB_DEFAULT (48 << 14)
+#define AUDIO_FB_DELTA (uint32_t)(1 << 14)
+
 uint8_t USBD_AUDIO_SOF(USBD_HandleTypeDef *pdev)
 {
   USBD_AUDIO_HandleTypeDef   *haudio;
@@ -699,12 +708,30 @@ uint8_t USBD_AUDIO_SOF(USBD_HandleTypeDef *pdev)
   {
 
     SOF_num++;
-    if (SOF_num == (1 << SOF_RATE))
+//    if (SOF_num == (1 << SOF_RATE))
+    if (SOF_num == 1)
     {
       SOF_num = 0;
 
       haudio->feedback_val = audio_buffer_getfeedback();
-      USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)(&haudio->feedback_val), 3);
+
+      // min/max
+      if (haudio->feedback_val > AUDIO_FB_DEFAULT + AUDIO_FB_DELTA) {
+        haudio->feedback_val = AUDIO_FB_DEFAULT + AUDIO_FB_DELTA;
+      } else if (haudio->feedback_val < AUDIO_FB_DEFAULT - AUDIO_FB_DELTA) {
+        haudio->feedback_val = AUDIO_FB_DEFAULT - AUDIO_FB_DELTA;
+      }
+    }
+
+    if (tx_flag == 0) {
+      USB_OTG_GlobalTypeDef* USBx = USB_OTG_FS;
+      uint32_t USBx_BASE = (uint32_t)USBx;
+      uint32_t volatile fnsof_new = (USBx_DEVICE->DSTS & USB_OTG_DSTS_FNSOF) >> 8;
+
+      if ((fnsof & 0x1) == (fnsof_new & 0x1)) {
+        USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)(&haudio->feedback_val), 3);
+        tx_flag = 1U;
+      }
     }
   }
 
@@ -739,17 +766,29 @@ uint8_t USBD_AUDIO_IsoINIncomplete(USBD_HandleTypeDef *pdev, uint8_t epnum)
   USBD_AUDIO_HandleTypeDef *haudio;
   haudio = (USBD_AUDIO_HandleTypeDef *)pdev->pClassData[0];
 
+
+
 #ifdef USB_AUDIO_ASYNC_ENABLE
+  USB_OTG_GlobalTypeDef* USBx = USB_OTG_FS;
+  uint32_t USBx_BASE = (uint32_t)USBx;
+  fnsof = (USBx_DEVICE->DSTS & USB_OTG_DSTS_FNSOF) >> 8;
+
+  if (tx_flag == 1U) {
+    tx_flag = 0U;
+    USBD_LL_FlushEP(pdev, AUDIO_FEEDBACK_EP);
+  }
+
+#if 0
   USB_DIEPCTL(AUDIO_FEEDBACK_EP) |= (USB_OTG_DIEPCTL_EPDIS | USB_OTG_DIEPCTL_SNAK);
   while (USB_DIEPCTL(AUDIO_FEEDBACK_EP) & USB_OTG_DIEPCTL_EPENA);
 
   USBD_LL_FlushEP(pdev, AUDIO_FEEDBACK_EP);
 
-  uint32_t feedback = audio_buffer_getfeedback();
-  haudio->feedback_val = feedback;
-  USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)&feedback, 3);
+  haudio->feedback_val = audio_buffer_getfeedback();
+  USBD_LL_Transmit(pdev, AUDIO_FEEDBACK_EP, (uint8_t*)&haudio->feedback_val, 3);
 
   SOF_num = 0;
+#endif
 #endif
   return USBD_OK;
 }
@@ -772,8 +811,10 @@ uint8_t USBD_AUDIO_IsoOutIncomplete(USBD_HandleTypeDef *pdev, uint8_t epnum)
 
   USBD_LL_PrepareReceive(pdev, AUDIO_OUT_EP, &haudio->buffer[0], AUDIO_OUT_PACKET);  
 
+#ifdef USB_AUDIO_ASYNC_ENABLE
   audio_buffer_fill(0,(haudio->feedback_val >> 14) * 8);
-  
+#endif
+
   return USBD_OK;
 }
 /**

@@ -133,12 +133,24 @@ Ff is expressed in number of samples per (micro)frame for one channel. The Ff va
 */
 uint32_t audio_buffer_getfeedback(void)
 {
+#if 0
 	int32_t diff;
-	
 	diff = ((int32_t)(AUDIO_BUFFER_SIZE / 2) - audio_buffer_count_fixed); //Calculate the byte difference
-	diff /= 4; //Convert it to the number of samples (2 channels * 4 bytes per sample = 8)
+//	diff /= 4; //Convert it to the number of samples (2 channels * 4 bytes per sample = 8)
 	diff <<= 14; //Align the integer part to fit 10.14 standard
-	diff /= 100;	//Convert to values around 1ms
+	diff /= (AUDIO_BUFFER_SIZE / 2);	//??? Convert to values around 1ms
 	//Obtain the desirable Fs value and return it in 10.14 format
-	return diff + (((audio_buffer_srate << 10) / 1000) << 4);
+//	return diff + (((audio_buffer_srate << 10) / 1000) << 4);
+	return (48 << 14) + diff;
+#endif
+	int32_t diff;
+	int32_t freq_diff;
+	diff = ((int32_t)(AUDIO_BUFFER_SIZE / 2) - audio_buffer_count_fixed); //Calculate the byte difference
+
+	if(diff <= AUDIO_BUFFER_SIZE/4) {
+		freq_diff = -1;
+	} else if(diff >= AUDIO_BUFFER_SIZE*3/4) {
+		freq_diff = 1;
+	}
+	return ((48+freq_diff) << 14);
 }

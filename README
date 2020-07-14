@@ -39,8 +39,8 @@ Default make for STM32F746-DISCO board, use "make BOARD=MUSICBOARD" for custom b
 
 TODO:
 - bug: synthesis sometimes make a "click" noise
-- bug: USB Audio asynchronous feedback does not work
 - feature: TinySoundFont does not fully implement SF2 (modulators)
+- feature: Add MIDI IN/OUT uart interfaces
 - feature: USB-MIDI to MIDI interface (add MIDI-IN and MIDI-OUT)
 - feature: Audio IN
 - feature: Add sysex for chorus & reverb control

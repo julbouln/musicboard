@@ -19,11 +19,18 @@
 #define SYSEX_MANUFACTURER_ROLAND 0x41
 #define SYSEX_MANUFACTURER_YAMAHA 0x43
 
+#define SYSEX_MANUFACTURER_UNIVERSAL_NONREALTIME 0x7E
+#define SYSEX_MANUFACTURER_UNIVERSAL_REALTIME 0x7F
+
 #define SYSEX_ROLAND_MODEL_GS 0x42
 
-#define SYSEX_ROLAND_RESET 0x40007f
-#define SYSEX_ROLAND_SET_REVERB_TYPE 0x400130
-#define SYSEX_ROLAND_SET_CHORUS_TYPE 0x400138
+#define SYSEX_GS_RESET 0x40007f
+#define SYSEX_GS_SET_MASTER_VOLUME 0x400004
+#define SYSEX_GS_SET_REVERB_TYPE 0x400130
+#define SYSEX_GS_SET_CHORUS_TYPE 0x400138
+
+#define SYSEX_UNIVERSAL_RESET 0x0901
+#define SYSEX_UNIVERSAL_SET_MASTER_VOLUME 0x0401
 
 
 struct midi_sysex {
@@ -37,13 +44,18 @@ struct midi_sysex {
 	void *manufacturer_data;
 };
 
-struct midi_roland_sysex {
+struct midi_gs_sysex {
 	uint8_t device_id;
 	uint8_t model_id;
 	uint8_t command_id;
 	uint32_t addr;
 	uint8_t data;
 	uint8_t checksum;
+};
+
+struct midi_universal_sysex {
+	uint16_t addr;
+	uint16_t data;
 };
 
 struct midi_sysex_functions {

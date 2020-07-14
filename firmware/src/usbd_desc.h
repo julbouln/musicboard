@@ -44,14 +44,6 @@
 extern USBD_DescriptorsTypeDef MUSICBOARD_Desc;
 
 
-//#define MUCISBOARD_USB_AUDIO_ONLY
-//#define MUCISBOARD_USB_MIDI_ONLY
-//#define MUCISBOARD_USB_MSC_ONLY
-
-//#define MUCISBOARD_USB_MSC_DISABLE
-
-#define MUCISBOARD_USB_COMPOSITE
-
 #endif /* __USBD_DESC_H */
  
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -47,6 +47,11 @@ extern "C" {
 #define USBD_AUDIO_FREQ                               48000U
 #endif /* USBD_AUDIO_FREQ */
 
+
+#ifndef USBD_AUDIO_FREQ_MAX
+#define USBD_AUDIO_FREQ_MAX                           96000U
+#endif
+
 #ifndef USBD_MAX_NUM_INTERFACES
 #define USBD_MAX_NUM_INTERFACES                       1U
 #endif /* USBD_AUDIO_FREQ */
@@ -120,15 +125,17 @@ extern "C" {
 #define AUDIO_IN_TC                                   0x02U
 
 
-#define AUDIO_OUT_PACKET                              (uint16_t)(((USBD_AUDIO_FREQ * 2U * 2U) / 1000U))
+#define AUDIO_OUT_PACKET                              (uint16_t)(((USBD_AUDIO_FREQ * 2U * 2U) / 1000U)) // 192 1ms
+//#define AUDIO_OUT_PACKET                          ((uint16_t)((USBD_AUDIO_FREQ_MAX / 1000U + 1) * 2U * 2U)) // 388
+
 //*4 - four bytes in sample, *2 - two channels, *(11/10) - 10% more, /1000 - to get bytes/ms
-//#define AUDIO_OUT_PACKET                                ((uint32_t)(((USBD_AUDIO_FREQ * 2 * 2) * 11) /10) / 1000)
 
 /* Number of sub-packets in the audio transfer buffer. You can modify this value but always make sure
   that it is an even number and higher than 3 */
 #define AUDIO_OUT_PACKET_NUM                          20U
 /* Total size of the audio transfer buffer */
-#define AUDIO_TOTAL_BUF_SIZE                          ((uint16_t)(AUDIO_OUT_PACKET * AUDIO_OUT_PACKET_NUM)) // 3840
+#define AUDIO_TOTAL_BUF_SIZE                          ((uint16_t)(AUDIO_OUT_PACKET * AUDIO_OUT_PACKET_NUM)) // 3840 = 20ms
+//#define AUDIO_TOTAL_BUF_SIZE                          ((uint16_t)((USBD_AUDIO_FREQ_MAX / 1000U + 1) * 2U * 4U * AUDIO_OUT_PACKET_NUM)) // 6208
 
 /** 
  * The minimum distance that the wr_ptr should keep before rd_ptr to 
@@ -155,7 +162,7 @@ extern "C" {
 
 #define VOL_PERCENT(vol) (uint8_t)((vol - (int16_t)USBD_AUDIO_VOL_MIN) / (((int16_t)USBD_AUDIO_VOL_MAX - (int16_t)USBD_AUDIO_VOL_MIN) / 100))
 
-#define SOF_RATE                                      0x02U // 4ms
+#define SOF_RATE                                      0x05U // 32ms
 
 /* Audio Commands enumeration */
 typedef enum

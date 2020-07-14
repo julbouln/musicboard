@@ -88,14 +88,20 @@
   * @{
   */
 
+#ifdef LED2_PIN
+const uint32_t GPIO_PIN[LEDn] = {LED1_PIN, LED2_PIN};
+const GPIO_TypeDef* GPIO_PORT[LEDn] = {LED1_GPIO_PORT, LED2_GPIO_PORT};
+#else
 const uint32_t GPIO_PIN[LEDn] = {LED1_PIN};
-USART_TypeDef* COM_USART[COMn] = {DISCOVERY_COM1};
-GPIO_TypeDef* COM_TX_PORT[COMn] = {DISCOVERY_COM1_TX_GPIO_PORT};
-GPIO_TypeDef* COM_RX_PORT[COMn] = {DISCOVERY_COM1_RX_GPIO_PORT};
-const uint16_t COM_TX_PIN[COMn] = {DISCOVERY_COM1_TX_PIN};
-const uint16_t COM_RX_PIN[COMn] = {DISCOVERY_COM1_RX_PIN};
-const uint16_t COM_TX_AF[COMn] = {DISCOVERY_COM1_TX_AF};
-const uint16_t COM_RX_AF[COMn] = {DISCOVERY_COM1_RX_AF};
+const GPIO_TypeDef* GPIO_PORT[LEDn] = {LED1_GPIO_PORT};
+#endif
+USART_TypeDef* COM_USART[COMn] = {MIDI_COM1};
+GPIO_TypeDef* COM_TX_PORT[COMn] = {MIDI_COM1_TX_GPIO_PORT};
+GPIO_TypeDef* COM_RX_PORT[COMn] = {MIDI_COM1_RX_GPIO_PORT};
+const uint16_t COM_TX_PIN[COMn] = {MIDI_COM1_TX_PIN};
+const uint16_t COM_RX_PIN[COMn] = {MIDI_COM1_RX_PIN};
+const uint16_t COM_TX_AF[COMn] = {MIDI_COM1_TX_AF};
+const uint16_t COM_RX_AF[COMn] = {MIDI_COM1_RX_AF};
 
 static I2C_HandleTypeDef hI2cAudioHandler = {0};
 
@@ -131,7 +137,7 @@ uint32_t BSP_GetVersion(void)
 
 /**
   * @brief  Configures LED on GPIO.
-  * @param  Led: LED to be configured. 
+  * @param  Led: LED to be configured.
   *          This parameter can be one of the following values:
   *            @arg  LED1
   * @retval None
@@ -141,28 +147,33 @@ void BSP_LED_Init(Led_TypeDef Led)
   GPIO_InitTypeDef  gpio_init_structure;
   GPIO_TypeDef*     gpio_led;
 
+  gpio_led = GPIO_PORT[Led];
+  /* Enable the GPIO_LED clock */
   if (Led == LED1)
   {
-    gpio_led = LED1_GPIO_PORT;
-    /* Enable the GPIO_LED clock */
     LED1_GPIO_CLK_ENABLE();
-
-    /* Configure the GPIO_LED pin */
-    gpio_init_structure.Pin = GPIO_PIN[Led];
-    gpio_init_structure.Mode = GPIO_MODE_OUTPUT_PP;
-    gpio_init_structure.Pull = GPIO_PULLUP;
-    gpio_init_structure.Speed = GPIO_SPEED_HIGH;
-  
-    HAL_GPIO_Init(gpio_led, &gpio_init_structure);
-    
-    /* By default, turn off LED */
-    HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
   }
+#ifdef LED2_PIN
+  if (Led == LED2)
+  {
+    LED2_GPIO_CLK_ENABLE();
+  }
+#endif
+  /* Configure the GPIO_LED pin */
+  gpio_init_structure.Pin = GPIO_PIN[Led];
+  gpio_init_structure.Mode = GPIO_MODE_OUTPUT_PP;
+  gpio_init_structure.Pull = GPIO_PULLUP;
+  gpio_init_structure.Speed = GPIO_SPEED_HIGH;
+
+  HAL_GPIO_Init(gpio_led, &gpio_init_structure);
+
+  /* By default, turn off LED */
+  HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
 }
 
 /**
   * @brief  DeInit LEDs.
-  * @param  Led: LED to be configured. 
+  * @param  Led: LED to be configured.
   *          This parameter can be one of the following values:
   *            @arg  LED1
   * @note Led DeInit does not disable the GPIO clock
@@ -173,20 +184,17 @@ void BSP_LED_DeInit(Led_TypeDef Led)
   GPIO_InitTypeDef  gpio_init_structure;
   GPIO_TypeDef*     gpio_led;
 
-  if (Led == LED1)
-  {
-    gpio_led = LED1_GPIO_PORT;
-    /* Turn off LED */
-    HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
-    /* Configure the GPIO_LED pin */
-    gpio_init_structure.Pin = GPIO_PIN[Led];
-    HAL_GPIO_DeInit(gpio_led, gpio_init_structure.Pin);
-  }
+  gpio_led = GPIO_PORT[Led];
+  /* Turn off LED */
+  HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
+  /* Configure the GPIO_LED pin */
+  gpio_init_structure.Pin = GPIO_PIN[Led];
+  HAL_GPIO_DeInit(gpio_led, gpio_init_structure.Pin);
 }
 
 /**
   * @brief  Turns selected LED On.
-  * @param  Led: LED to be set on 
+  * @param  Led: LED to be set on
   *          This parameter can be one of the following values:
   *            @arg  LED1
   * @retval None
@@ -195,15 +203,12 @@ void BSP_LED_On(Led_TypeDef Led)
 {
   GPIO_TypeDef*     gpio_led;
 
-  if (Led == LED1)	/* Switch On LED connected to GPIO */
-  {
-    gpio_led = LED1_GPIO_PORT;
-    HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_SET);
-  }
+  gpio_led = GPIO_PORT[Led];
+  HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_SET);
 }
 
 /**
-  * @brief  Turns selected LED Off. 
+  * @brief  Turns selected LED Off.
   * @param  Led: LED to be set off
   *          This parameter can be one of the following values:
   *            @arg  LED1
@@ -213,11 +218,8 @@ void BSP_LED_Off(Led_TypeDef Led)
 {
   GPIO_TypeDef*     gpio_led;
 
-  if (Led == LED1) /* Switch Off LED connected to GPIO */
-  {
-    gpio_led = LED1_GPIO_PORT;
-    HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
-  }
+  gpio_led = GPIO_PORT[Led];
+  HAL_GPIO_WritePin(gpio_led, GPIO_PIN[Led], GPIO_PIN_RESET);
 }
 
 /**
@@ -231,11 +233,8 @@ void BSP_LED_Toggle(Led_TypeDef Led)
 {
   GPIO_TypeDef*     gpio_led;
 
-  if (Led == LED1)	/* Toggle LED connected to GPIO */
-  {
-    gpio_led = LED1_GPIO_PORT;
-    HAL_GPIO_TogglePin(gpio_led, GPIO_PIN[Led]);
-  }
+  gpio_led = GPIO_PORT[Led];
+  HAL_GPIO_TogglePin(gpio_led, GPIO_PIN[Led]);
 }
 
 /**
@@ -253,11 +252,11 @@ void BSP_COM_Init(COM_TypeDef COM, UART_HandleTypeDef *huart)
   GPIO_InitTypeDef gpio_init_structure;
 
   /* Enable GPIO clock */
-  DISCOVERY_COMx_TX_GPIO_CLK_ENABLE(COM);
-  DISCOVERY_COMx_RX_GPIO_CLK_ENABLE(COM);
+  MIDI_COMx_TX_GPIO_CLK_ENABLE(COM);
+  MIDI_COMx_RX_GPIO_CLK_ENABLE(COM);
 
   /* Enable USART clock */
-  DISCOVERY_COMx_CLK_ENABLE(COM);
+  MIDI_COMx_CLK_ENABLE(COM);
 
   /* Configure USART Tx as alternate function */
   gpio_init_structure.Pin = COM_TX_PIN[COM];
@@ -275,6 +274,17 @@ void BSP_COM_Init(COM_TypeDef COM, UART_HandleTypeDef *huart)
 
   /* USART configuration */
   huart->Instance = COM_USART[COM];
+
+  huart->Init.BaudRate = 31250;
+  huart->Init.WordLength = UART_WORDLENGTH_8B;
+  huart->Init.StopBits = UART_STOPBITS_1;
+  huart->Init.Parity = UART_PARITY_NONE;
+  huart->Init.Mode = UART_MODE_TX_RX;
+  huart->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart->Init.OverSampling = UART_OVERSAMPLING_16;
+  huart->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+
   HAL_UART_Init(huart);
 }
 
@@ -295,7 +305,7 @@ void BSP_COM_DeInit(COM_TypeDef COM, UART_HandleTypeDef *huart)
   HAL_UART_DeInit(huart);
 
   /* Enable USART clock */
-  DISCOVERY_COMx_CLK_DISABLE(COM);
+  MIDI_COMx_CLK_DISABLE(COM);
 
   /* DeInit GPIO pins can be done in the application 
      (by surcharging this __weak function) */

@@ -137,6 +137,10 @@ enum TSFOutputMode
 //   global_gain_db: volume gain in decibels (>0 means higher, <0 means lower)
 TSFDEF void tsf_set_output(tsf* f, enum TSFOutputMode outputmode, int32_t samplerate, float global_gain_db CPP_DEFAULT0);
 
+// Set the global gain as a volume factor
+//   global_gain: the desired volume where 1.0 is 100%
+TSFDEF void tsf_set_volume(tsf* f, float global_gain);
+
 // Start playing a note
 //   preset_index: preset index >= 0 and < tsf_get_presetcount()
 //   key: note value between 0 and 127 (60 being middle C)
@@ -1842,6 +1846,11 @@ TSFDEF void tsf_set_output(tsf* f, enum TSFOutputMode outputmode, int32_t sample
 	f->globalGainDB = global_gain_db;
 }
 
+TSFDEF void tsf_set_volume(tsf* f, float global_volume)
+{
+	f->globalGainDB = (global_volume == 1.0f ? 0 : -tsf_gainToDecibels(1.0f / global_volume));
+}
+
 static struct tsf_voice *tsf_reusable_voice(tsf * f, float cap) {
 	struct tsf_voice *reuseVoice, *v, *vEnd;
 	reuseVoice = TSF_NULL;
@@ -2293,7 +2302,7 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		return;
 	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
 	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-	// default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	//default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

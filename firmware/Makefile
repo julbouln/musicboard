@@ -29,7 +29,7 @@ SRCS      += stm32f7xx_it.c
 SRCS      += stm32f7xx_hal_rcc.c stm32f7xx_hal_rcc_ex.c stm32f7xx_hal.c stm32f7xx_hal_cortex.c stm32f7xx_hal_gpio.c \
 			 stm32f7xx_hal_pwr_ex.c stm32f7xx_hal_tim.c stm32f7xx_hal_tim_ex.c stm32f7xx_hal_pcd.c stm32f7xx_hal_pcd_ex.c \
 			 stm32f7xx_hal_hcd.c stm32f7xx_hal_i2s.c stm32f7xx_hal_qspi.c stm32f7xx_hal_sai.c stm32f7xx_hal_sai_ex.c stm32f7xx_hal_i2c.c \
-			 stm32f7xx_ll_usb.c stm32f7xx_hal_dma.c \
+			 stm32f7xx_ll_usb.c stm32f7xx_hal_dma.c stm32f7xx_hal_uart.c \
 			 $(BSP_BASE).c $(BSP_BASE)_audio.c $(BSP_BASE)_qspi.c $(BSP_BASE)_codec.c \
 			 qspi_wrapper.c \
 			 usbd_core.c usbd_ctlreq.c usbd_ioreq.c \

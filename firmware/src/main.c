@@ -58,11 +58,17 @@ int main(void)
 
   /* Configure LED1 */
   BSP_LED_Init(LED1);
+  #ifdef LED2_PIN
+    BSP_LED_Init(LED2);
+  #endif
 
   HAL_Delay(100);
 
   setbuf(stdout, NULL);
   BSP_LED_Off(LED1);
+  #ifdef LED2_PIN
+    BSP_LED_Off(LED2);
+  #endif
 
   QSPI_init();
   
