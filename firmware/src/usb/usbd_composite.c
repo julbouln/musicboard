@@ -269,7 +269,7 @@ static uint8_t USBD_Composite_CfgDesc[USB_COMPOSITE_CONFIG_DESC_SIZ] =
     0x11,                              /* bmAttributes */
     0x03, 0x00,                        /* wMaxPacketSize in Bytes */
     0x01,                              /* bInterval 1ms */
-    SOF_RATE,                          /* bRefresh 4ms = 2^2 */
+    SOF_FEEDBACK_RATE,                 /* bRefresh = 2^SOF_FEEDBACK_RATE ms */
     0x00,                              /* bSynchAddress */
     /* 09 byte*/
 #endif

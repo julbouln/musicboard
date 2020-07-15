@@ -1526,7 +1526,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 
 		int32_t samplesBuf[TSF_RENDER_EFFECTSAMPLEBLOCK];
 		int32_t *buf = samplesBuf;
-		int32_t in0, in1, in2, in3;
+		int32_t in0, in1;
 		int32_t out0, out1, out2, out3;
 
 		int blkCnt, blckRemain;

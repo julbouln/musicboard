@@ -37,8 +37,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __AUDIO_H
-#define __AUDIO_H
+#ifndef __AUDIO_DRV_H
+#define __AUDIO_DRV_H
 
 #ifdef __cplusplus
  extern "C" {

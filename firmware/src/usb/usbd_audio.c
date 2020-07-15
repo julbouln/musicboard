@@ -328,7 +328,7 @@ __ALIGN_BEGIN uint8_t USBD_AUDIO_CfgDesc[USB_AUDIO_CONFIG_DESC_SIZ] __ALIGN_END 
     0x11,                              /* bmAttributes */
     0x03, 0x00,                        /* wMaxPacketSize in Bytes */
     0x01,                              /* bInterval 1ms */
-    SOF_RATE,                          /* bRefresh 4ms = 2^2 */
+    SOF_FEEDBACK_RATE,                 /* bRefresh = 2^SOF_FEEDBACK_RATE ms */
     0x00,                              /* bSynchAddress */
     /* 09 byte*/
 #endif
@@ -708,7 +708,7 @@ uint8_t USBD_AUDIO_SOF(USBD_HandleTypeDef *pdev)
   {
 
     SOF_num++;
-//    if (SOF_num == (1 << SOF_RATE))
+//    if (SOF_num == (1 << SOF_FEEDBACK_RATE))
     if (SOF_num == 1)
     {
       SOF_num = 0;

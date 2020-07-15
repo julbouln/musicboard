@@ -41,7 +41,7 @@
 #define __WM8994_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "audio.h"
+#include "audio_drv.h"
 
 /** @addtogroup BSP
   * @{

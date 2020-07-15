@@ -144,13 +144,14 @@ uint32_t audio_buffer_getfeedback(void)
 	return (48 << 14) + diff;
 #endif
 	int32_t diff;
-	int32_t freq_diff;
 	diff = ((int32_t)(AUDIO_BUFFER_SIZE / 2) - audio_buffer_count_fixed); //Calculate the byte difference
 
 	if(diff <= AUDIO_BUFFER_SIZE/4) {
-		freq_diff = -1;
+		diff = -(1 << 14);
 	} else if(diff >= AUDIO_BUFFER_SIZE*3/4) {
-		freq_diff = 1;
+		diff = (1 << 14);
+	} else {
+		diff = 0;
 	}
-	return ((48+freq_diff) << 14);
+	return (48 << 14) + diff;
 }

@@ -162,7 +162,7 @@ extern "C" {
 
 #define VOL_PERCENT(vol) (uint8_t)((vol - (int16_t)USBD_AUDIO_VOL_MIN) / (((int16_t)USBD_AUDIO_VOL_MAX - (int16_t)USBD_AUDIO_VOL_MIN) / 100))
 
-#define SOF_RATE                                      0x05U // 32ms
+#define SOF_FEEDBACK_RATE                             0x02U // 32ms
 
 /* Audio Commands enumeration */
 typedef enum
