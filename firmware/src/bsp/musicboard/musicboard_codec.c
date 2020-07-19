@@ -149,23 +149,28 @@ uint32_t wm8731_Init(uint16_t DeviceAddr, uint16_t OutputInputDevice, uint8_t Vo
 
   HAL_Delay(10);
 
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x0f, 0b000000000); // Reset!
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_RESET, 0b000000000); // Reset!
 
   HAL_Delay(10);
 
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x00, 0x100 | (0x17 & 0x1f)); // Left line in, unmute
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x01, 0x100 | (0x17 & 0x1f)); // right line in, unmute
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_LEFT_LINE_IN, 0x100 | (0x17 & 0x1f)); // Left line in, unmute
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_RIGHT_LINE_IN, 0x100 | (0x17 & 0x1f)); // right line in, unmute
 
   wm8731_SetVolumedB(AUDIO_I2C_ADDRESS, -10);
 
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x04, 0b000010010); // Analog path - select DAC, no bypass
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x05, 0b000000000); // Digital path - disable soft mute
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x06, 0b000000000); // Power down control - enable everything
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x07, 0b000000010); // Interface format - 16-bit I2S
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x09, 0b000000001); // Active control - engage!
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_ANALOG_PATH_CTRL, 0b000010010); // Analog path - select DAC, no bypass
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_DIGITAL_PATH_CTRL, 0b000000000); // Digital path - disable soft mute
+//  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_POWER_DOWN_CTRL, 0b000000000); // Power down control - enable everything
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_POWER_DOWN_CTRL, 0b000000110); // Power down control - enable except CLKOUT and OSC
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_DIGITAL_INTF_FMT, 0b000000010); // Interface format - 16-bit I2S
 
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x00, 0x100 | (0x17 & 0x1f)); // Left line in, unmute
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x01, 0x100 | (0x17 & 0x1f)); // right line in, unmute
+  //CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_SAMPLING_CTRL, 0b000000001);
+
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_ACTIVE_CTRL, 0b000000001); // Active control - engage!
+
+
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_LEFT_LINE_IN, 0x100 | (0x17 & 0x1f)); // Left line in, unmute
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_RIGHT_LINE_IN, 0x100 | (0x17 & 0x1f)); // right line in, unmute
 
   wm8731_SetVolumedB(AUDIO_I2C_ADDRESS, -10);
 
@@ -285,8 +290,8 @@ uint32_t wm8731_SetVolume(uint16_t DeviceAddr, uint8_t Volume)
 uint32_t wm8731_SetMute(uint16_t DeviceAddr, uint32_t Cmd)
 {
   uint32_t counter = 0;
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x02, 0x100); // left line out volume
-  CODEC_IO_Write(AUDIO_I2C_ADDRESS, 0x03, 0x100); // right line out volume
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_LEFT_HF_OUT, 0x100); // left line out volume
+  CODEC_IO_Write(AUDIO_I2C_ADDRESS, WM8731_REG_RIGHT_HF_OUT, 0x100); // right line out volume
   return counter;
 }
 

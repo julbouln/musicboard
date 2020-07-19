@@ -6,6 +6,12 @@
 #define POLYPHONY 64
 #define AUDIO_BUF_SIZE (AUDIO_TOTAL_BUF_SIZE) // from usb_audio, 3840
 
+#define MB_MALLOC malloc
+#define MB_REALLOC realloc
+#define MB_FREE free
+#define MB_MEMSET memset
+#define MB_MEMCPY memcpy
+
 //#define MUCISBOARD_USB_AUDIO_ONLY
 //#define MUCISBOARD_USB_MIDI_ONLY
 //#define MUCISBOARD_USB_MSC_ONLY

@@ -25,6 +25,18 @@ SRCS       = main.c
 SRCS      += system_$(MCU_FAMILY).c
 SRCS      += stm32f7xx_it.c
 
+RTOS_SOURCES = \
+croutine.c \
+event_groups.c \
+list.c \
+queue.c \
+stream_buffer.c \
+tasks.c \
+timers.c \
+cmsis_os2.c \
+heap_4.c \
+port.c  
+
 # Basic HAL libraries
 SRCS      += stm32f7xx_hal_rcc.c stm32f7xx_hal_rcc_ex.c stm32f7xx_hal.c stm32f7xx_hal_cortex.c stm32f7xx_hal_gpio.c \
 			 stm32f7xx_hal_pwr_ex.c stm32f7xx_hal_tim.c stm32f7xx_hal_tim_ex.c stm32f7xx_hal_pcd.c stm32f7xx_hal_pcd_ex.c \
@@ -35,7 +47,7 @@ SRCS      += stm32f7xx_hal_rcc.c stm32f7xx_hal_rcc_ex.c stm32f7xx_hal.c stm32f7x
 			 usbd_core.c usbd_ctlreq.c usbd_ioreq.c \
 			 usbd_msc_bot.c usbd_msc_scsi.c usbd_msc.c usbd_msc_data.c \
 			 usbd_composite.c \
-			 audio_buffer.c \
+			 audio_buffer.c audio.c \
 			 midi.c synth.c \
 			 usbd_audio.c usbd_audio_if.c \
 			 usbd_midi.c usbd_midi_if.c \
@@ -48,6 +60,8 @@ ifeq ($(SYNTH), FLUIDSYNTH)
 			 fluid_chorus.c fluid_list.c fluid_synth.c fluid_voice.c
 endif
 
+SRCS += $(RTOS_SOURCES)
+
 # Directories
 OCD_DIR    = openocd-stm32f7/tcl
 
@@ -56,6 +70,7 @@ BSP_DIR    = src/bsp/$(BSP_BASE)
 CMSIS_DIR  = src/cmsis
 AUDIO_DIR  = src/audio
 USB_DIR	   = src/usb
+RTOS_DIR   = src/freertos
 
 # that's it, no need to change anything below this line!
 
@@ -103,6 +118,7 @@ INCS      += -I$(CMSIS_DIR)
 INCS      += -I$(AUDIO_DIR)
 INCS      += -I$(USB_DIR)
 INCS      += -Isrc/efluidsynth
+INCS      += -I$(RTOS_DIR)
 
 # Library search paths
 LIBS       = -L$(CMSIS_DIR)
@@ -134,6 +150,7 @@ VPATH     += $(HAL_DIR)
 VPATH     += $(AUDIO_DIR)
 VPATH     += $(USB_DIR)
 VPATH     += src/efluidsynth
+VPATH     += $(RTOS_DIR)
 OBJS       = $(addprefix obj/,$(SRCS:.c=.o))
 DEPS       = $(addprefix dep/,$(SRCS:.c=.d))
 

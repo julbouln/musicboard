@@ -9,38 +9,134 @@ static void Error_Handler(void);
 static void MPU_Config(void);
 static void CPU_CACHE_Enable(void);
 
+#include "FreeRTOS.h"
+#include "task.h"
+
+osThreadId_t led_handle, audio_handle, midi_handle;
+osSemaphoreId_t audio_sem;
+
+osMessageQueueId_t midi_queue;
+
+uint8_t synthesized = 0;
+
 uint8_t global_buf[AUDIO_BUF_SIZE];
 
-void audio_init() {
-  USBD_AUDIO_HandleTypeDef *haudio = (USBD_AUDIO_HandleTypeDef *)USBD_Device.pClassData[0];
-  memset(haudio->buffer, 0, AUDIO_TOTAL_BUF_SIZE);
-}
-
-void audio_update(uint8_t *buf, uint32_t bufpos, uint32_t bufsize) {
-  int16_t *in = (int16_t *)audio_buffer_getptr(bufpos, bufsize);
-  int16_t *out = (int16_t *)&buf[0] + bufpos / 2;
-  
-  int blkCnt = (bufsize / 2) >> 2;
-  while (blkCnt--) {
-    *out++ += *in++ >> 1;
-    *out++ += *in++ >> 1;
-    *out++ += *in++ >> 1;
-    *out++ += *in++ >> 1;
-  }
-  
-}
-
 void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
-{  
-  synth_update(global_buf, 0, AUDIO_BUF_SIZE/2);
-  audio_update(global_buf, 0, AUDIO_BUF_SIZE/2);  
+{
+  if(synthesized) 
+  {
+    synth_update(global_buf, 0, AUDIO_BUF_SIZE / 2);
+    audio_update(global_buf, 0, AUDIO_BUF_SIZE / 2);
+  } else {
+    // skip half/frame
+    memset(&global_buf[0], 0, AUDIO_BUF_SIZE / 2);
+  }
 }
 
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
-  synth_update(global_buf, AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);
-  audio_update(global_buf, AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);  
+  if(synthesized) {
+    synth_update(global_buf, AUDIO_BUF_SIZE / 2, AUDIO_BUF_SIZE / 2);
+    audio_update(global_buf, AUDIO_BUF_SIZE / 2, AUDIO_BUF_SIZE / 2);
+  } else {
+    // skip half/frame
+    memset(&global_buf[0] + AUDIO_BUF_SIZE / 2, 0, AUDIO_BUF_SIZE / 2);
+  }
+
+  osSemaphoreRelease(audio_sem);
 }
+
+void vApplicationIdleHook( void )
+{
+  while (1)
+  {
+    __WFI();
+  }
+}
+
+void led_task(void *argument)
+{
+  while (1) {
+    if (synth_available()) {
+      BSP_LED_Toggle(LED1);
+    }
+    osDelay(1000);
+    osThreadYield();
+  }
+}
+
+
+void midi_task(void *argument)
+{
+  while (1) {
+    if (synth_available()) {
+      struct midi_message midi_msg;
+
+      osStatus_t status = osMessageQueueGet(midi_queue, &midi_msg, NULL, osWaitForever);
+      if (status == osOK) {
+        BSP_LED_Toggle(LED2);
+        synth_midi_process(midi_msg.data, midi_msg.len);
+      }
+    }
+    osThreadYield();
+  }
+}
+
+void audio_task(void *argument)
+{
+  while (1) {
+    osSemaphoreAcquire(audio_sem, osWaitForever);
+    synthesized = 0;
+    synth_render(0, AUDIO_BUF_SIZE/2);
+    synthesized = 1;
+    synth_render(AUDIO_BUF_SIZE/2, AUDIO_BUF_SIZE/2);
+    synthesized = 2;
+    osThreadYield();
+  }
+}
+
+void led_init() {
+  /* Configure LED1 */
+  BSP_LED_Init(LED1);
+#ifdef LED2_PIN
+  BSP_LED_Init(LED2);
+#endif
+
+  BSP_LED_Off(LED1);
+#ifdef LED2_PIN
+  BSP_LED_Off(LED2);
+#endif
+}
+
+void usb_init() {
+#ifdef MUCISBOARD_USB_COMPOSITE
+  /* Make the connection and initialize to USB_OTG/usbdc_core */
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_Composite_ClassDriver);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+#else
+#ifdef MUCISBOARD_USB_MIDI_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_Midi_ClassDriver);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+#endif
+
+#ifdef MUCISBOARD_USB_AUDIO_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_AUDIO);
+  USBD_Composite_RegisterInterface(&USBD_Device);
+#endif
+
+#ifdef MUSICBOARD_USB_MSC_ONLY
+  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
+  USBD_RegisterClass(&USBD_Device, &USBD_MSC);
+  USBD_MSC_RegisterStorage(&USBD_Device, &USBD_DISK_fops);
+#endif
+#endif
+
+  USBD_Start(&USBD_Device);
+}
+
 
 int main(void)
 {
@@ -56,22 +152,13 @@ int main(void)
   /* Configure the system clock to 200 MHz */
   SystemClock_Config();
 
-  /* Configure LED1 */
-  BSP_LED_Init(LED1);
-  #ifdef LED2_PIN
-    BSP_LED_Init(LED2);
-  #endif
-
-  HAL_Delay(100);
+  led_init();
 
   setbuf(stdout, NULL);
-  BSP_LED_Off(LED1);
-  #ifdef LED2_PIN
-    BSP_LED_Off(LED2);
-  #endif
+  HAL_Delay(100);
 
   QSPI_init();
-  
+
   HAL_Delay(100);
 
   synth_init();
@@ -85,7 +172,7 @@ int main(void)
   memset(global_buf, 0, AUDIO_BUF_SIZE);
   BSP_AUDIO_OUT_Play((uint16_t *)&global_buf[0], AUDIO_BUF_SIZE);
 
-#if 1
+#if 0
   /* Prescaler declaration */
   uint32_t uwPrescalerValue = 0;
   uwPrescalerValue = (uint32_t)((SystemCoreClock / 2) / 10000) - 1;
@@ -119,33 +206,31 @@ int main(void)
     Error_Handler();
   }
 #endif
+  usb_init();
 
-#ifdef MUCISBOARD_USB_COMPOSITE
-  /* Make the connection and initialize to USB_OTG/usbdc_core */
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_Composite_ClassDriver);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-#else
-  #ifdef MUCISBOARD_USB_MIDI_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_Midi_ClassDriver);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-  #endif
+  osKernelInitialize();
 
-  #ifdef MUCISBOARD_USB_AUDIO_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_AUDIO);
-  USBD_Composite_RegisterInterface(&USBD_Device);
-  #endif
+  audio_sem = osSemaphoreNew (1, 1, NULL);
 
-  #ifdef MUSICBOARD_USB_MSC_ONLY
-  USBD_Init(&USBD_Device, &MUSICBOARD_Desc, 0);
-  USBD_RegisterClass(&USBD_Device, &USBD_MSC);
-  USBD_MSC_RegisterStorage(&USBD_Device, &USBD_DISK_fops);
-  #endif
-#endif
+  midi_queue = osMessageQueueNew(32, sizeof(struct midi_message), NULL);
 
-  USBD_Start(&USBD_Device);
+
+  osThreadAttr_t led_thr_attr = {
+    .priority = osPriorityLow
+  };
+  osThreadAttr_t midi_thr_attr = {
+    .priority = osPriorityNormal
+  };
+  osThreadAttr_t audio_thr_attr = {
+    .priority = osPriorityRealtime
+  };
+
+
+  led_handle = osThreadNew(led_task, NULL, &led_thr_attr);
+  midi_handle = osThreadNew(midi_task, NULL, &midi_thr_attr);
+  audio_handle = osThreadNew(audio_task, NULL, &audio_thr_attr);
+
+  osKernelStart();
 
   while (1)
   {
@@ -153,10 +238,11 @@ int main(void)
   }
 }
 
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim->Instance == TIM3) {
-    if(synth_available()) {
+  if (htim->Instance == TIM3) {
+    if (synth_available()) {
       BSP_LED_Toggle(LED1);
     }
   }
@@ -242,7 +328,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
   /*##-1- Enable peripheral clock #################################*/
   /* TIMx Peripheral clock enable */
   __HAL_RCC_TIM3_CLK_ENABLE();
-  
+
   /*##-2- Configure the NVIC for TIMx ########################################*/
   /* Set the TIMx priority */
   HAL_NVIC_SetPriority(TIM3_IRQn, 3, 0);

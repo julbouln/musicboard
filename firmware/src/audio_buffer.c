@@ -153,5 +153,5 @@ uint32_t audio_buffer_getfeedback(void)
 	} else {
 		diff = 0;
 	}
-	return (48 << 14) + diff;
+	return ((SAMPLE_RATE/1000) << 14) + diff;
 }

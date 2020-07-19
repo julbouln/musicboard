@@ -1349,7 +1349,7 @@ static int32_t tsf_voice_lowpass_process(struct tsf_voice_lowpass* e, int32_t in
 	e->z2 = (e->a0 * in) - (e->b2 * out);
 
 //	printf("LOW-PASS in:%d out:%d z1:%d z2:%d\n",In,Out,e->z1,e->z2);
-	return __SSAT(out, 16);
+	return out;
 }
 
 #endif
@@ -1406,7 +1406,6 @@ static void tsf_voice_render_lowpass(struct tsf_voice_lowpass *e, int32_t *buf, 
 		int32_t out0, out1;
 
 		int blkCnt = (samples) >> 1;
-
 		while (blkCnt--)
 		{
 			in0 = *buf++;
@@ -1508,6 +1507,7 @@ static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer,
 
 		uint64_t phaseIncr = float_to_fixed64(pitchRatio);
 		uint32_t pos, nextPos;
+		
 #ifndef TSF_NO_INTERPOLATION
 		int32_t alpha;
 #endif

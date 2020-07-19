@@ -138,7 +138,19 @@
 /** @defgroup WM8994_Exported_Functions
   * @{
   */
-    
+
+#define WM8731_REG_LEFT_LINE_IN 0b0000000
+#define WM8731_REG_RIGHT_LINE_IN 0b0000001
+#define WM8731_REG_LEFT_HF_OUT 0b0000010
+#define WM8731_REG_RIGHT_HF_OUT 0b0000011
+#define WM8731_REG_ANALOG_PATH_CTRL 0b0000100
+#define WM8731_REG_DIGITAL_PATH_CTRL 0b0000101
+#define WM8731_REG_POWER_DOWN_CTRL 0b0000110
+#define WM8731_REG_DIGITAL_INTF_FMT 0b0000111
+#define WM8731_REG_SAMPLING_CTRL 0b0001000
+#define WM8731_REG_ACTIVE_CTRL 0b0001001
+#define WM8731_REG_RESET 0b0001111
+
 /*------------------------------------------------------------------------------
                            Audio Codec functions 
 ------------------------------------------------------------------------------*/

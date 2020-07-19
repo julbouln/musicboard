@@ -75,7 +75,11 @@
 #include "qspi_wrapper.h"
 #include "usbd_audio.h"
 
+#include "cmsis_os2.h"
+
 #include "synth.h"
+#include "audio.h"
+#include "midi.h"
 #include "config.h"
 
 #endif /* __MAIN_H */

@@ -72,7 +72,7 @@ uint32_t QSPI_flash_size() {
 
 // do not really open a file
 QSPI_FILE *QSPI_fopen(const char *p, const char *omode) {
-  QSPI_FILE *file = (QSPI_FILE *)malloc(sizeof(QSPI_FILE));
+  QSPI_FILE *file = (QSPI_FILE *)MB_MALLOC(sizeof(QSPI_FILE));
   file->pos = 0;
   file->size = QSPI_flash_size();
   return file;
@@ -107,7 +107,7 @@ inline size_t QSPI_ftell(QSPI_FILE * f) {
 }
 
 void QSPI_fclose(QSPI_FILE *f) {
-  free(f);
+  MB_FREE(f);
 }
 
 

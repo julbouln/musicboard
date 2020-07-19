@@ -165,6 +165,7 @@ void UsageFault_Handler(void)
   exit(1);
 }
 
+#if 0
 /**
   * @brief  This function handles SVCall exception.
   * @param  None
@@ -173,6 +174,7 @@ void UsageFault_Handler(void)
 void SVC_Handler(void)
 {
 }
+#endif
 
 /**
   * @brief  This function handles Debug Monitor exception.
@@ -183,6 +185,7 @@ void DebugMon_Handler(void)
 {
 }
 
+#if 0
 /**
   * @brief  This function handles PendSVC exception.
   * @param  None
@@ -191,15 +194,23 @@ void DebugMon_Handler(void)
 void PendSV_Handler(void)
 {
 }
+#endif
 
 /**
   * @brief  This function handles SysTick Handler.
   * @param  None
   * @retval None
   */
+#include "FreeRTOS.h"
+#include "task.h"
 void SysTick_Handler(void)
 {
   HAL_IncTick();
+  if(xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+  {
+    xPortSysTickHandler();
+  }
+//  xPortSysTickHandler();
 }
 
 #ifdef USE_USB_FS

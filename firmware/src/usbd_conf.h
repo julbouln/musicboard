@@ -48,16 +48,16 @@
 #define USBD_DEBUG_LEVEL                      0
 
 /* AUDIO Class Config */
-#define USBD_AUDIO_FREQ                       48000
+#define USBD_AUDIO_FREQ                       SAMPLE_RATE
 
 #define MSC_MEDIA_PACKET 4096
 
 /* Exported macro ------------------------------------------------------------*/
 /* Memory management macros */   
-#define USBD_malloc               malloc
-#define USBD_free                 free
-#define USBD_memset               memset
-#define USBD_memcpy               memcpy
+#define USBD_malloc               MB_MALLOC
+#define USBD_free                 MB_FREE
+#define USBD_memset               MB_MEMSET
+#define USBD_memcpy               MB_MEMCPY
     
 /* DEBUG macros */  
 #if (USBD_DEBUG_LEVEL > 0)

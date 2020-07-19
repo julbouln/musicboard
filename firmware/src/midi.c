@@ -9,6 +9,7 @@
 #endif
 
 #include "midi.h"
+#include "config.h"
 
 //#define SYSEX_DEBUG
 
@@ -59,7 +60,7 @@ void midi_sysex_end_process() {
 	case SYSEX_MANUFACTURER_UNIVERSAL_NONREALTIME:
 	case SYSEX_MANUFACTURER_UNIVERSAL_REALTIME:
 	{
-		struct midi_universal_sysex *man_sysex = (struct midi_universal_sysex *)malloc(sizeof(struct midi_universal_sysex));
+		struct midi_universal_sysex *man_sysex = (struct midi_universal_sysex *)MB_MALLOC(sizeof(struct midi_universal_sysex));
 		man_sysex->addr = sysex.data[1] << 8 | sysex.data[2];
 		if (sysex.data[3] != 0xF7) {
 			man_sysex->data = sysex.data[3] << 8 | sysex.data[4];
@@ -77,7 +78,7 @@ void midi_sysex_end_process() {
 	break;
 	case SYSEX_MANUFACTURER_ROLAND:
 		if (sysex.data[1] == SYSEX_ROLAND_MODEL_GS) {
-			struct midi_gs_sysex *man_sysex = (struct midi_gs_sysex *)malloc(sizeof(struct midi_gs_sysex));
+			struct midi_gs_sysex *man_sysex = (struct midi_gs_sysex *)MB_MALLOC(sizeof(struct midi_gs_sysex));
 			man_sysex->device_id = sysex.data[0];
 			man_sysex->model_id = sysex.data[1];
 			man_sysex->command_id = sysex.data[2];
@@ -195,7 +196,7 @@ void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
 		printf("\n");
 #endif
 		if (sysex.manufacturer_data) {
-			free(sysex.manufacturer_data);
+			MB_FREE(sysex.manufacturer_data);
 		}
 		memset(&sysex, 0, sizeof(struct midi_sysex));
 	}
