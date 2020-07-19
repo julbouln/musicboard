@@ -34,7 +34,7 @@ stream_buffer.c \
 tasks.c \
 timers.c \
 cmsis_os2.c \
-heap_4.c \
+heap_3.c \
 port.c  
 
 # Basic HAL libraries

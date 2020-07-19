@@ -6,6 +6,7 @@
 #include "efluidsynth.h"
 #endif
 
+#include "config.h"
 #include "midi.h"
 
 #ifdef TSF_SYNTH

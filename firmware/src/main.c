@@ -220,13 +220,14 @@ int main(void)
   };
 #ifdef QUEUED_MIDI_MESSAGES
   osThreadAttr_t midi_thr_attr = {
-    .priority = osPriorityNormal
+    .priority = osPriorityNormal,
+    .stack_size = 1024
   };
 #endif
   osThreadAttr_t audio_thr_attr = {
-    .priority = osPriorityRealtime
+    .priority = osPriorityRealtime,
+    .stack_size = 4096
   };
-
 
   led_handle = osThreadNew(led_task, NULL, &led_thr_attr);
 #ifdef QUEUED_MIDI_MESSAGES
