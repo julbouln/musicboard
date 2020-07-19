@@ -11,6 +11,7 @@
 #define MIDI_CHANNEL_PRESSURE 0xD0
 #define MIDI_PITCH_BEND 0xE0
 
+#define MAX_MIDI_LEN 64
 #define MAX_MIDI_SYSEX_LEN 64
 
 #define MIDI_SYSEX_START 0xF0
@@ -32,10 +33,8 @@
 #define SYSEX_UNIVERSAL_RESET 0x0901
 #define SYSEX_UNIVERSAL_SET_MASTER_VOLUME 0x0401
 
-
-
 struct midi_message {
-	uint8_t data[MAX_MIDI_SYSEX_LEN];
+	uint8_t data[MAX_MIDI_LEN];
 	uint32_t len;
 };
 
@@ -44,10 +43,7 @@ struct midi_sysex {
 	uint8_t data[MAX_MIDI_SYSEX_LEN];
 	uint16_t pos;
 	uint16_t len;
-
 	uint8_t started, ended;
-
-	void *manufacturer_data;
 };
 
 struct midi_gs_sysex {

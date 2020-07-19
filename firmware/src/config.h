@@ -20,4 +20,6 @@
 
 #define MUCISBOARD_USB_COMPOSITE
 
+//#define QUEUED_MIDI_MESSAGES // buggy
+
 #endif

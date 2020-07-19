@@ -130,6 +130,7 @@ void synth_reset() {
 #else
       delete_fluid_synth(synth);
 #endif
+      synth = NULL;
       synth_init();
 }
 
@@ -155,10 +156,6 @@ uint8_t synth_available() {
 
 void synth_render (uint32_t bufpos, uint32_t bufsize) {
   if (synth_available()) {
-//  #ifdef LED2_PIN
-//    BSP_LED_Toggle(LED2);
-//  #endif
-
     synth_reset_updated();
     tsf_render_short(synth, (int16_t *)&synth_buf[bufpos], bufsize / 4, 0);
   }

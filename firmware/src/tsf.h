@@ -983,8 +983,6 @@ static void tsf_preload_presets(tsf* res)
 
 					uint8_t ilokey = 0, ihikey = 127, ilovel = 0, ihivel = 127;
 
-					//for (pigen = hydra->igens + pibag->instGenNdx, pigenEnd = hydra->igens + pibag[1].instGenNdx; pigen != pigenEnd; pigen++)
-					//{
 					int32_t pigenIdx;
 					for (pigenIdx = pibag.instGenNdx; pigenIdx < nextpibag.instGenNdx; pigenIdx++)
 					{
@@ -1400,6 +1398,7 @@ static void tsf_voice_calcpitchratio(struct tsf_voice* v, float pitchShift, floa
 	v->pitchOutputFactor = v->region->sample_rate / (tsf_timecents2Secsf(v->region->pitch_keycenter * 100.0) * outSampleRate);
 }
 
+#ifndef TSF_NO_LOWPASS
 static void tsf_voice_render_lowpass(struct tsf_voice_lowpass *e, int32_t *buf, uint32_t samples) {
 	if (e->active) {
 		int32_t in0, in1;
@@ -1430,6 +1429,7 @@ static void tsf_voice_render_lowpass(struct tsf_voice_lowpass *e, int32_t *buf, 
 
 	}
 }
+#endif
 
 static void tsf_voice_render(tsf* f, struct tsf_voice* v, int32_t* outputBuffer, int32_t *chorusBuffer, int32_t *reverbBuffer, int32_t numSamples)
 {
@@ -2300,9 +2300,9 @@ TSFDEF void tsf_channel_midi_control(tsf* f, int32_t channel, int32_t controller
 		tsf_channel_set_pan(f, channel, 0.5f);
 		tsf_channel_set_pitchrange(f, channel, 2.0f);
 		return;
-	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb %f\n", c->reverb); */ return;
-	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus %f\n", c->chorus); */ return;
-	//default: printf("UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
+	case 91 /* reverb */ : c->reverb = (float)control_value / 127.0f; /* printf("TSF send reverb chan:%d val:%f\n", channel, c->reverb); */ return;
+	case 93 /* chorus */ : c->chorus = (float)control_value / 127.0f; /* printf("TSF send chorus chan:%d val:%f\n", channel, c->chorus); */ return;
+	//default: printf("TSF UNSUPPORTED CC %d(%x) : %d %d\n",controller,controller,channel,control_value); return;
 	}
 	return;
 TCMC_SET_VOLUME:

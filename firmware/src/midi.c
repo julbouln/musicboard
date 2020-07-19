@@ -9,11 +9,9 @@
 #endif
 
 #include "midi.h"
-#include "config.h"
 
+#define SYSEX_ENABLE
 //#define SYSEX_DEBUG
-
-struct midi_sysex sysex;
 
 __attribute__((weak)) void midi_sysex_reset(void) {
 }
@@ -55,76 +53,73 @@ void midi_sysex_gs_process(struct midi_gs_sysex *man_sysex) {
 	}
 }
 
-void midi_sysex_end_process() {
-	switch (sysex.manufacturer) {
+void midi_sysex_end_process(struct midi_sysex *sysex) {
+	switch (sysex->manufacturer) {
 	case SYSEX_MANUFACTURER_UNIVERSAL_NONREALTIME:
 	case SYSEX_MANUFACTURER_UNIVERSAL_REALTIME:
 	{
-		struct midi_universal_sysex *man_sysex = (struct midi_universal_sysex *)MB_MALLOC(sizeof(struct midi_universal_sysex));
-		man_sysex->addr = sysex.data[1] << 8 | sysex.data[2];
-		if (sysex.data[3] != 0xF7) {
-			man_sysex->data = sysex.data[3] << 8 | sysex.data[4];
+		struct midi_universal_sysex man_sysex;
+		man_sysex.addr = sysex->data[1] << 8 | sysex->data[2];
+		if (sysex->data[3] != 0xF7) {
+			man_sysex.data = sysex->data[3] << 8 | sysex->data[4];
 		} else {
-			man_sysex->data = 0;
+			man_sysex.data = 0;
 		}
-		sysex.manufacturer_data = man_sysex;
 #ifdef SYSEX_DEBUG
 		printf("UNIVERSAL SYSEX addr:%x data:%x\n",
-		       man_sysex->addr, man_sysex->data
+		       man_sysex.addr, man_sysex.data
 		      );
 #endif
-		midi_sysex_universal_process(man_sysex);
+		midi_sysex_universal_process(&man_sysex);
 	}
 	break;
 	case SYSEX_MANUFACTURER_ROLAND:
-		if (sysex.data[1] == SYSEX_ROLAND_MODEL_GS) {
-			struct midi_gs_sysex *man_sysex = (struct midi_gs_sysex *)MB_MALLOC(sizeof(struct midi_gs_sysex));
-			man_sysex->device_id = sysex.data[0];
-			man_sysex->model_id = sysex.data[1];
-			man_sysex->command_id = sysex.data[2];
-			man_sysex->addr = sysex.data[3] << 16 | sysex.data[4] << 8 | sysex.data[5];
-			man_sysex->data = sysex.data[6];
-			man_sysex->checksum = sysex.data[7];
-			sysex.manufacturer_data = man_sysex;
+		if (sysex->data[1] == SYSEX_ROLAND_MODEL_GS) {
+			struct midi_gs_sysex man_sysex;
+			man_sysex.device_id = sysex->data[0];
+			man_sysex.model_id = sysex->data[1];
+			man_sysex.command_id = sysex->data[2];
+			man_sysex.addr = sysex->data[3] << 16 | sysex->data[4] << 8 | sysex->data[5];
+			man_sysex.data = sysex->data[6];
+			man_sysex.checksum = sysex->data[7];
 #ifdef SYSEX_DEBUG
 			printf("GS SYSEX device_id:%x model_id:%x command_id:%x addr:%x data:%x checksum:%x\n",
-			       man_sysex->device_id, man_sysex->model_id, man_sysex->command_id,
-			       man_sysex->addr, man_sysex->data, man_sysex->checksum
+			       man_sysex.device_id, man_sysex.model_id, man_sysex.command_id,
+			       man_sysex.addr, man_sysex.data, man_sysex.checksum
 			      );
 #endif
-			midi_sysex_gs_process(man_sysex);
+			midi_sysex_gs_process(&man_sysex);
 		}
 		break;
 	}
 }
 
-void midi_sysex_process(uint8_t *msg, uint32_t len) {
+void midi_sysex_process(struct midi_sysex *sysex, uint8_t *msg, uint32_t len) {
 	if (msg[0] == MIDI_SYSEX_START) {
-		memset(&sysex, 0, sizeof(struct midi_sysex));
-		sysex.len = len;
-		sysex.len--;
-		sysex.manufacturer = msg[1];
-		sysex.len--;
-		if (sysex.manufacturer == 0x00) {
-			sysex.manufacturer = msg[2] << 16 | msg[3];
-			sysex.len -= 2;
+		memset(sysex, 0, sizeof(struct midi_sysex));
+		sysex->len = len;
+		sysex->len--;
+		sysex->manufacturer = msg[1];
+		sysex->len--;
+		if (sysex->manufacturer == 0x00) {
+			sysex->manufacturer = msg[2] << 16 | msg[3];
+			sysex->len -= 2;
 		}
-		sysex.started = 1;
+		sysex->started = 1;
 	}
-	if (sysex.started && !sysex.ended) {
-		for (int i = 0; i < sysex.len; i++) {
-			int j = i + (len - sysex.len);
+	if (sysex->started && !sysex->ended) {
+		for (int i = 0; i < sysex->len; i++) {
+			int j = i + (len - sysex->len);
 			if (msg[j] == MIDI_SYSEX_END) {
-				sysex.ended = 1;
-				midi_sysex_end_process();
-				sysex.len--;
+				sysex->ended = 1;
+				midi_sysex_end_process(sysex);
+				sysex->len--;
 			} else {
-				sysex.data[i] = msg[j];
-				sysex.pos++;
+				sysex->data[i] = msg[j];
+				sysex->pos++;
 			}
 		}
 	}
-
 }
 
 void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
@@ -155,7 +150,23 @@ void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
 	case MIDI_PITCH_BEND:
 		tsf_channel_set_pitchwheel(synth, chan, b);
 		break;
-		break;
+	case MIDI_SYSEX_START:
+	{
+#ifdef SYSEX_ENABLE
+		struct midi_sysex sysex;
+		midi_sysex_process(&sysex, msg, len);
+		if (sysex.ended == 1) {
+#ifdef SYSEX_DEBUG
+			printf("SYSEX (processed) manufacturer:%x len:%d data:", sysex.manufacturer, sysex.len);
+			for (int i = 0; i < sysex.len; i++) {
+				printf("%x ", sysex.data[i]);
+			}
+			printf("\n");
+#endif
+		}
+#endif
+	}
+	break;
 	default:
 		break;
 	}
@@ -182,23 +193,6 @@ void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
 		break;
 	default:
 		break;
-	}
-#endif
-
-#if 1
-	midi_sysex_process(msg, len);
-	if (sysex.ended == 1) {
-#ifdef SYSEX_DEBUG
-		printf("SYSEX (processed) manufacturer:%x len:%d data:", sysex.manufacturer, sysex.len);
-		for (int i = 0; i < sysex.len; i++) {
-			printf("%x ", sysex.data[i]);
-		}
-		printf("\n");
-#endif
-		if (sysex.manufacturer_data) {
-			MB_FREE(sysex.manufacturer_data);
-		}
-		memset(&sysex, 0, sizeof(struct midi_sysex));
 	}
 #endif
 

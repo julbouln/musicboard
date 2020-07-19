@@ -409,6 +409,7 @@ uint8_t USBD_AUDIO_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
   haudio->freq = USBD_AUDIO_FREQ;
   haudio->vol = USBD_AUDIO_VOL_DEFAULT;
   haudio->mute = 0;
+  memset(haudio->buffer, 0, AUDIO_TOTAL_BUF_SIZE);
 #ifdef USB_AUDIO_ASYNC_ENABLE
   haudio->feedback_val = (USBD_AUDIO_FREQ << 14) / 1000;
 #endif

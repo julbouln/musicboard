@@ -12,8 +12,8 @@ static void CPU_CACHE_Enable(void);
 #include "FreeRTOS.h"
 #include "task.h"
 
-osThreadId_t led_handle, audio_handle, midi_handle;
-osSemaphoreId_t audio_sem;
+osThreadId_t led_handle, synth_handle, midi_handle;
+osSemaphoreId_t synth_sem;
 
 osMessageQueueId_t midi_queue;
 
@@ -43,7 +43,7 @@ void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
     memset(&global_buf[0] + AUDIO_BUF_SIZE / 2, 0, AUDIO_BUF_SIZE / 2);
   }
 
-  osSemaphoreRelease(audio_sem);
+  osSemaphoreRelease(synth_sem);
 }
 
 void vApplicationIdleHook( void )
@@ -65,7 +65,6 @@ void led_task(void *argument)
   }
 }
 
-
 void midi_task(void *argument)
 {
   while (1) {
@@ -74,7 +73,9 @@ void midi_task(void *argument)
 
       osStatus_t status = osMessageQueueGet(midi_queue, &midi_msg, NULL, osWaitForever);
       if (status == osOK) {
+#ifdef LED2_PIN
         BSP_LED_Toggle(LED2);
+#endif
         synth_midi_process(midi_msg.data, midi_msg.len);
       }
     }
@@ -82,10 +83,10 @@ void midi_task(void *argument)
   }
 }
 
-void audio_task(void *argument)
+void synth_task(void *argument)
 {
   while (1) {
-    osSemaphoreAcquire(audio_sem, osWaitForever);
+    osSemaphoreAcquire(synth_sem, osWaitForever);
     synthesized = 0;
     synth_render(0, AUDIO_BUF_SIZE/2);
     synthesized = 1;
@@ -210,25 +211,28 @@ int main(void)
 
   osKernelInitialize();
 
-  audio_sem = osSemaphoreNew (1, 1, NULL);
-
+  synth_sem = osSemaphoreNew (1, 1, NULL);
+#ifdef QUEUED_MIDI_MESSAGES
   midi_queue = osMessageQueueNew(32, sizeof(struct midi_message), NULL);
-
-
+#endif
   osThreadAttr_t led_thr_attr = {
     .priority = osPriorityLow
   };
+#ifdef QUEUED_MIDI_MESSAGES
   osThreadAttr_t midi_thr_attr = {
     .priority = osPriorityNormal
   };
+#endif
   osThreadAttr_t audio_thr_attr = {
     .priority = osPriorityRealtime
   };
 
 
   led_handle = osThreadNew(led_task, NULL, &led_thr_attr);
+#ifdef QUEUED_MIDI_MESSAGES
   midi_handle = osThreadNew(midi_task, NULL, &midi_thr_attr);
-  audio_handle = osThreadNew(audio_task, NULL, &audio_thr_attr);
+#endif
+  synth_handle = osThreadNew(synth_task, NULL, &audio_thr_attr);
 
   osKernelStart();
 

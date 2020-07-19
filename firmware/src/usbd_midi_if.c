@@ -24,23 +24,23 @@ USBD_Midi_ItfTypeDef USBD_Midi_fops = {
 };
 
 static int8_t Midi_Receive(uint8_t *msg, uint32_t len) {
-  #ifdef LED2_PIN
-//    BSP_LED_Toggle(LED2);
-  #endif
 
-	if(len <= MAX_MIDI_SYSEX_LEN) {
+#ifdef QUEUED_MIDI_MESSAGES
+	if(len <= MAX_MIDI_LEN) {
 	    struct midi_message midi_msg;
     	memcpy(midi_msg.data, msg, len);
 	    midi_msg.len = len;
 
 		osMessageQueuePut(midi_queue, &midi_msg, 0U, 0U);
-	    // osSemaphoreRelease(queue_sem);
 	}
-
-/*	if (synth_available()) {
+#else
+	if (synth_available()) {
+	  #ifdef LED2_PIN
+    	BSP_LED_Toggle(LED2);
+	  #endif
 		midi_process(synth, msg, len);
 	}
-	*/
+#endif	
 
 	return 0;
 }

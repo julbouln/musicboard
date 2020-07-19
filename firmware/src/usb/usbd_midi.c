@@ -459,7 +459,6 @@ uint8_t  USBD_Midi_DataOut (USBD_HandleTypeDef *pdev,
       ((USBD_Midi_ItfTypeDef *)pdev->pUserData[1])->Receive(data, data_pos);
       data_pos = 0;
     }
-
   }
 
   USBD_LL_PrepareReceive(pdev,
