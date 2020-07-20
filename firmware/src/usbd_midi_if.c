@@ -8,12 +8,7 @@
 
 #include "config.h"
 #include "midi.h"
-
-#ifdef TSF_SYNTH
-extern tsf* synth;
-#else
-extern fluid_synth_t* synth;
-#endif
+#include "synth.h"
 
 static int8_t Midi_Receive(uint8_t *msg, uint32_t len);
 
@@ -37,9 +32,12 @@ static int8_t Midi_Receive(uint8_t *msg, uint32_t len) {
 #else
 	if (synth_available()) {
 	  #ifdef LED2_PIN
-    	BSP_LED_Toggle(LED2);
+    	BSP_LED_On(LED2);
 	  #endif
-		midi_process(synth, msg, len);
+		synth_midi_process(msg, len);
+	  #ifdef LED2_PIN
+    	BSP_LED_Off(LED2);
+	  #endif
 	}
 #endif	
 

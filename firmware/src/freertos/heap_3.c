@@ -93,5 +93,16 @@ void vPortFree( void *pv )
 	}
 }
 
+// extra
+void *pvPortRealloc( void *pv, size_t size )
+{
+    void *pvReturn;
 
+    vTaskSuspendAll();
+    {
+        pvReturn = realloc( pv, size );
+    }
+    xTaskResumeAll();
 
+    return pvReturn;
+}

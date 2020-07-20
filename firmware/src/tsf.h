@@ -319,6 +319,14 @@ void prof_free(void *ptr) {
 #define TSF_SQRTF   sqrtf
 #endif
 
+#if !defined(TSF_MUTEX_TYPEDEF) || !defined(TSF_MUTEX_INIT) || !defined(TSF_MUTEX_DEINIT) || !defined(TSF_MUTEX_LOCK) || !defined(TSF_MUTEX_UNLOCK)
+#define TSF_MUTEX_TYPEDEF uint32_t
+#define TSF_MUTEX_INIT 0
+#define TSF_MUTEX_DEINIT
+#define TSF_MUTEX_LOCK
+#define TSF_MUTEX_UNLOCK
+#endif
+
 #ifndef TSF_NO_STDIO
 #  include <stdio.h>
 #endif
@@ -635,6 +643,7 @@ struct tsf_voice
 	float  noteGainDB, panFactorLeft, panFactorRight;
 	uint32_t playIndex, loopStart, loopEnd;
 	uint8_t locked;
+	TSF_MUTEX_TYPEDEF mutex;
 	struct tsf_voice_envelope ampenv, modenv;
 	struct tsf_voice_lowpass lowpass;
 	struct tsf_voice_lfo modlfo, viblfo;
@@ -1753,8 +1762,10 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 		printf("MALLOC struct tsf_voice %ld * %ld = %ld\n", res->voicesMax, sizeof(struct tsf_voice), res->voicesMax * sizeof(struct tsf_voice));
 #endif
 		res->voices = (struct tsf_voice *)TSF_MALLOC(res->voicesMax * sizeof(struct tsf_voice));
-		for (int i = 0; i < res->voicesMax; i++)
+		for (int i = 0; i < res->voicesMax; i++) {
+			res->voices[i].mutex = TSF_MUTEX_INIT;
 			res->voices[i].playingPreset = -1;
+		}
 		res->voiceNum = res->voicesMax;
 
 		res->stream = stream;
@@ -1775,13 +1786,18 @@ TSFDEF tsf* tsf_load(struct tsf_stream* stream)
 }
 
 TSFDEF void tsf_set_max_voices(tsf* f, int max) {
-	f->voicesMax = max;
 #ifdef TSF_MEM_PROF
 	printf("REALLOC struct tsf_voice %ld * %ld = %ld\n", f->voicesMax, sizeof(struct tsf_voice), f->voicesMax * sizeof(struct tsf_voice));
 #endif
+	for (int i = 0; i < f->voicesMax; i++) {
+		TSF_MUTEX_DEINIT(f->voices[i].mutex);
+	}
+	f->voicesMax = max;
 	f->voices = (struct tsf_voice *)TSF_REALLOC(f->voices, f->voicesMax * sizeof(struct tsf_voice));
-	for (int i = 0; i < f->voicesMax; i++)
+	for (int i = 0; i < f->voicesMax; i++) {
+		f->voices[i].mutex = TSF_MUTEX_INIT;
 		f->voices[i].playingPreset = -1;
+	}
 	f->voiceNum = f->voicesMax;
 }
 
@@ -1789,6 +1805,11 @@ TSFDEF void tsf_close(tsf* f)
 {
 	struct tsf_preset *preset, *presetEnd;
 	if (!f) return;
+
+	for (int i = 0; i < f->voicesMax; i++) {
+		TSF_MUTEX_DEINIT(f->voices[i].mutex);
+	}
+
 	for (preset = f->presets, presetEnd = preset + f->presetNum; preset != presetEnd; preset++) {
 		if (preset->loaded)
 			TSF_FREE(preset->regions);
@@ -1857,11 +1878,13 @@ static struct tsf_voice *tsf_reusable_voice(tsf * f, float cap) {
 	float minLevel = 2.0f;
 	v = f->voices, vEnd = v + f->voiceNum;
 	for (; v != vEnd; v++) {
+		TSF_MUTEX_LOCK(v->mutex);
 		if ((v->ampenv.segment == TSF_SEGMENT_DECAY || v->ampenv.segment == TSF_SEGMENT_SUSTAIN || v->ampenv.segment == TSF_SEGMENT_RELEASE || v->ampenv.segment == TSF_SEGMENT_DONE))
 			if (v->locked == 0 && v->ampenv.level < minLevel) {
 				minLevel = v->ampenv.level;
 				reuseVoice = v;
 			}
+		TSF_MUTEX_UNLOCK(v->mutex);
 	}
 
 	if (minLevel < cap)
@@ -1905,6 +1928,7 @@ TSFDEF void tsf_note_on(tsf* f, int32_t preset_index, int32_t key, float vel)
 		}
 
 		if (voice) {
+			TSF_MUTEX_LOCK(voice->mutex);
 			voice->locked = 1;
 			voice->region = region;
 			voice->playingPreset = preset_index;
@@ -1949,6 +1973,7 @@ TSFDEF void tsf_note_on(tsf* f, int32_t preset_index, int32_t key, float vel)
 			tsf_voice_lfo_setup(&voice->modlfo, region->delayModLFO, region->freqModLFO, f->outSampleRate);
 			tsf_voice_lfo_setup(&voice->viblfo, region->delayVibLFO, region->freqVibLFO, f->outSampleRate);
 			voice->locked = 0;
+			TSF_MUTEX_UNLOCK(voice->mutex);
 		} else {
 			// ignore note on
 		}
@@ -2046,11 +2071,13 @@ TSFDEF void tsf_render_short(tsf* f, int16_t* buffer, int32_t samples, int32_t f
 	if (!flag_mixing) TSF_MEMSET(buffer, 0, (f->outputmode == TSF_MONO ? 1 : 2) * sizeof(int16_t) * samples);
 
 	for (; v != vEnd; v++) {
+		TSF_MUTEX_LOCK(v->mutex);
 		if (v->playingPreset != -1 && v->locked == 0) {
 			v->locked = 1;
 			tsf_voice_render(f, v, f->buffer, f->chorusBuffer, f->reverbBuffer, samples);
 			v->locked = 0;
 		}
+		TSF_MUTEX_UNLOCK(v->mutex);
 	}
 
 #ifndef TSF_NO_CHORUS

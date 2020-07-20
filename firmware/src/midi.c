@@ -155,15 +155,15 @@ void midi_process(void *userdata, uint8_t *msg, uint32_t len) {
 #ifdef SYSEX_ENABLE
 		struct midi_sysex sysex;
 		midi_sysex_process(&sysex, msg, len);
-		if (sysex.ended == 1) {
 #ifdef SYSEX_DEBUG
+		if (sysex.ended == 1) {
 			printf("SYSEX (processed) manufacturer:%x len:%d data:", sysex.manufacturer, sysex.len);
 			for (int i = 0; i < sysex.len; i++) {
 				printf("%x ", sysex.data[i]);
 			}
 			printf("\n");
-#endif
 		}
+#endif
 #endif
 	}
 	break;

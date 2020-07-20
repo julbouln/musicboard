@@ -63,7 +63,7 @@ endif
 SRCS += $(RTOS_SOURCES)
 
 # Directories
-OCD_DIR    = openocd-stm32f7/tcl
+OCD_DIR    = openocd/tcl
 
 HAL_DIR    = src/hal
 BSP_DIR    = src/bsp/$(BSP_BASE)
@@ -85,7 +85,7 @@ OBJDUMP    = $(PREFIX)-objdump
 SIZE       = $(PREFIX)-size
 GDB        = $(PREFIX)-gdb
 
-OCD        = openocd-stm32f7/src/openocd
+OCD        = openocd/src/openocd
 
 ###############################################################################
 # Options
@@ -95,7 +95,6 @@ DEFS       = -D$(MCU_MC) -DUSE_HAL_DRIVER -DUSE_USB_FS -D__FPU_PRESENT -DUSE_$(B
 
 DEFS      += -DSTM32 -DSTM32F7 -DSTM32F746xx -DSTM32F746NGHx -DSTM32F746G_DISCO
 
-#DEFS      += -DAUDIO_FORMAT_32BITS # 32bits audio
 DEFS      += -DFREQ_216 # 216mhz clocking
 
 DEFS      += -DARM_MATH_CM7
@@ -103,6 +102,7 @@ DEFS      += -DARM_MATH_CM7
 # Debug specific definitions for semihosting
 DEFS       += -DUSE_DBPRINTF
 
+#DEFS       += -DUSE_FREERTOS
 
 ifeq ($(SYNTH), FLUIDSYNTH)
 DEFS 	  += -DFLUID_NO_NAMES -DFLUID_SAMPLE_MMAP -DFLUID_NO_NRPN_EXT -DFLUID_CALC_FORMAT_FLOAT -DFLUID_BUFFER_S16 -DFLUID_FIXED_POINT 

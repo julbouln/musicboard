@@ -9,15 +9,18 @@ static void Error_Handler(void);
 static void MPU_Config(void);
 static void CPU_CACHE_Enable(void);
 
-#include "FreeRTOS.h"
-#include "task.h"
+#ifdef USE_FREERTOS
 
 osThreadId_t led_handle, synth_handle, midi_handle;
 osSemaphoreId_t synth_sem;
+osMutexId_t synth_mutex;
 
 osMessageQueueId_t midi_queue;
 
 uint8_t synthesized = 0;
+#else
+uint8_t synthesized = 1;
+#endif
 
 uint8_t global_buf[AUDIO_BUF_SIZE];
 
@@ -43,9 +46,12 @@ void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
     memset(&global_buf[0] + AUDIO_BUF_SIZE / 2, 0, AUDIO_BUF_SIZE / 2);
   }
 
+#ifdef USE_FREERTOS
   osSemaphoreRelease(synth_sem);
+#endif
 }
 
+#ifdef USE_FREERTOS
 void vApplicationIdleHook( void )
 {
   while (1)
@@ -59,8 +65,13 @@ void led_task(void *argument)
   while (1) {
     if (synth_available()) {
       BSP_LED_Toggle(LED1);
+      osDelay(1000);
+    } else {
+      if(QSPI_is_writing()) {
+        BSP_LED_Toggle(LED1);
+        osDelay(100);        
+      }
     }
-    osDelay(1000);
     osThreadYield();
   }
 }
@@ -74,9 +85,12 @@ void midi_task(void *argument)
       osStatus_t status = osMessageQueueGet(midi_queue, &midi_msg, NULL, osWaitForever);
       if (status == osOK) {
 #ifdef LED2_PIN
-        BSP_LED_Toggle(LED2);
+        BSP_LED_On(LED2);
 #endif
         synth_midi_process(midi_msg.data, midi_msg.len);
+#ifdef LED2_PIN
+        BSP_LED_Off(LED2);
+#endif
       }
     }
     osThreadYield();
@@ -95,6 +109,7 @@ void synth_task(void *argument)
     osThreadYield();
   }
 }
+#endif
 
 void led_init() {
   /* Configure LED1 */
@@ -138,6 +153,9 @@ void usb_init() {
   USBD_Start(&USBD_Device);
 }
 
+void app_main(void *argument) {
+
+}
 
 int main(void)
 {
@@ -162,8 +180,6 @@ int main(void)
 
   HAL_Delay(100);
 
-  synth_init();
-
   audio_init();
   audio_buffer_init();
 
@@ -173,7 +189,53 @@ int main(void)
   memset(global_buf, 0, AUDIO_BUF_SIZE);
   BSP_AUDIO_OUT_Play((uint16_t *)&global_buf[0], AUDIO_BUF_SIZE);
 
-#if 0
+  usb_init();
+
+  synth_init();
+  synth_buffer_init();
+
+#ifdef USE_FREERTOS
+  osKernelInitialize();
+
+  synth_sem = osSemaphoreNew (1, 1, NULL);
+  synth_mutex = osMutexNew (NULL);
+
+#ifdef QUEUED_MIDI_MESSAGES
+  midi_queue = osMessageQueueNew(512, sizeof(struct midi_message), NULL);
+#endif
+  osThreadAttr_t led_thr_attr = {
+    .priority = osPriorityLow
+  };
+#ifdef QUEUED_MIDI_MESSAGES
+  osThreadAttr_t midi_thr_attr = {
+    .priority = osPriorityHigh,
+    .stack_size = 4096
+  };
+#endif
+  osThreadAttr_t synth_thr_attr = {
+    .priority = osPriorityRealtime,
+    .stack_size = 4096
+  };
+
+  led_handle = osThreadNew(led_task, NULL, &led_thr_attr);
+#ifdef QUEUED_MIDI_MESSAGES
+  midi_handle = osThreadNew(midi_task, NULL, &midi_thr_attr);
+#endif
+  synth_handle = osThreadNew(synth_task, NULL, &synth_thr_attr);
+
+  osKernelStart();
+#else
+  timer_init();
+#endif
+
+  while (1)
+  {
+    __WFI();
+  }
+}
+
+
+void timer_init() {
   /* Prescaler declaration */
   uint32_t uwPrescalerValue = 0;
   uwPrescalerValue = (uint32_t)((SystemCoreClock / 2) / 10000) - 1;
@@ -206,43 +268,7 @@ int main(void)
     /* Starting Error */
     Error_Handler();
   }
-#endif
-  usb_init();
-
-  osKernelInitialize();
-
-  synth_sem = osSemaphoreNew (1, 1, NULL);
-#ifdef QUEUED_MIDI_MESSAGES
-  midi_queue = osMessageQueueNew(32, sizeof(struct midi_message), NULL);
-#endif
-  osThreadAttr_t led_thr_attr = {
-    .priority = osPriorityLow
-  };
-#ifdef QUEUED_MIDI_MESSAGES
-  osThreadAttr_t midi_thr_attr = {
-    .priority = osPriorityNormal,
-    .stack_size = 1024
-  };
-#endif
-  osThreadAttr_t audio_thr_attr = {
-    .priority = osPriorityRealtime,
-    .stack_size = 4096
-  };
-
-  led_handle = osThreadNew(led_task, NULL, &led_thr_attr);
-#ifdef QUEUED_MIDI_MESSAGES
-  midi_handle = osThreadNew(midi_task, NULL, &midi_thr_attr);
-#endif
-  synth_handle = osThreadNew(synth_task, NULL, &audio_thr_attr);
-
-  osKernelStart();
-
-  while (1)
-  {
-    __WFI();
-  }
 }
-
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {

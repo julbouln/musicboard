@@ -4,6 +4,7 @@
 uint8_t qspi_write_mode;
 uint8_t qspi_wrote;
 uint32_t qspi_last_access;
+uint8_t qspi_writing;
 
 #define QSPI_READWRITE_WAIT 2000
 
@@ -15,6 +16,7 @@ void QSPI_init() {
   qspi_last_access = HAL_GetTick();
   qspi_write_mode = 0;
   qspi_wrote = 0;
+  qspi_writing = 0;
 }
 
 void QSPI_readwrite_mode() {
@@ -54,6 +56,18 @@ uint8_t QSPI_ready() {
     return 1;
   else
     return 0;
+}
+
+void QSPI_set_writing() {
+  qspi_writing = 1;
+}
+
+void QSPI_clear_writing() {
+  qspi_writing = 0;
+}
+
+uint8_t QSPI_is_writing() {
+  return qspi_writing;
 }
 
 uint32_t QSPI_flash_size() {

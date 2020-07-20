@@ -306,6 +306,15 @@ BlockLink_t *pxLink;
 		}
 	}
 }
+
+void *pvPortRealloc( void *pv, size_t size ) {
+	if(pv) {
+		vPortFree(pv);
+	}
+	pv = pvPortMalloc(size);
+	return pv;
+}
+
 /*-----------------------------------------------------------*/
 
 size_t xPortGetFreeHeapSize( void )

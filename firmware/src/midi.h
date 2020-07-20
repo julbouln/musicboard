@@ -35,7 +35,7 @@
 
 struct midi_message {
 	uint8_t data[MAX_MIDI_LEN];
-	uint32_t len;
+	uint16_t len;
 };
 
 struct midi_sysex {

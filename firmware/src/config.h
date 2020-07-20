@@ -20,6 +20,8 @@
 
 #define MUCISBOARD_USB_COMPOSITE
 
+#ifdef USE_FREERTOS
 //#define QUEUED_MIDI_MESSAGES // buggy
+#endif
 
 #endif

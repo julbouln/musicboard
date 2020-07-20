@@ -21,6 +21,10 @@ uint8_t QSPI_wrote_get(void);
 
 uint8_t QSPI_ready(void);
 
+void QSPI_set_writing(void);
+void QSPI_clear_writing(void);
+uint8_t QSPI_is_writing(void);
+
 uint32_t QSPI_flash_size(void);
 
 QSPI_FILE *QSPI_fopen(const char *p, const char *omode);

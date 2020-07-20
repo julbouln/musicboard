@@ -75,6 +75,37 @@ void NMI_Handler(void)
 }
 
 
+#ifdef USE_FREERTOS
+void prvGetRegistersFromStack( uint32_t *pulFaultStackAddress )
+{
+/* These are volatile to try and prevent the compiler/linker optimising them
+away as the variables never actually get used.  If the debugger won't show the
+values of the variables, make them global my moving their declaration outside
+of this function. */
+volatile uint32_t r0;
+volatile uint32_t r1;
+volatile uint32_t r2;
+volatile uint32_t r3;
+volatile uint32_t r12;
+volatile uint32_t lr; /* Link register. */
+volatile uint32_t pc; /* Program counter. */
+volatile uint32_t psr;/* Program status register. */
+
+    r0 = pulFaultStackAddress[ 0 ];
+    r1 = pulFaultStackAddress[ 1 ];
+    r2 = pulFaultStackAddress[ 2 ];
+    r3 = pulFaultStackAddress[ 3 ];
+
+    r12 = pulFaultStackAddress[ 4 ];
+    lr = pulFaultStackAddress[ 5 ];
+    pc = pulFaultStackAddress[ 6 ];
+    psr = pulFaultStackAddress[ 7 ];
+
+    /* When the following line is hit, the variables contain the register values. */
+    for( ;; );
+}
+#endif
+
 /**
   * @brief  This function handles Hard Fault exception.
   * @param  None
@@ -82,40 +113,19 @@ void NMI_Handler(void)
   */
 void HardFault_Handler(void)
 {
-  /* Go to infinite loop when Hard Fault exception occurs */
-/*  while (1)
-  {
-  }
-  */
-/*
-unsigned int stacked_r0;
-unsigned int stacked_r1;
-unsigned int stacked_r2;
-unsigned int stacked_r3;
-unsigned int stacked_r12;
-unsigned int stacked_lr;
-unsigned int stacked_pc;
-unsigned int stacked_psr;
-uint32_t* hardfault_args = (uint32_t*) 0x20000400;
-
-__asm( "TST LR, #4 \n"
-"ITE EQ \n"
-"MRSEQ R0, MSP \n"
-"MRSNE R0, PSP \n");
-
-stacked_r0 = ((unsigned long) hardfault_args[0]);
-stacked_r1 = ((unsigned long) hardfault_args[1]);
-stacked_r2 = ((unsigned long) hardfault_args[2]);
-stacked_r3 = ((unsigned long) hardfault_args[3]);
-
-stacked_r12 = ((unsigned long) hardfault_args[4]);
-stacked_lr = ((unsigned long) hardfault_args[5]);
-stacked_pc = ((unsigned long) hardfault_args[6]);
-stacked_psr = ((unsigned long) hardfault_args[7]); 
-  while(1);
-*/
-
-  exit(1);
+#ifdef USE_FREERTOS
+ __asm volatile
+    (
+        " tst lr, #4                                                \n"
+        " ite eq                                                    \n"
+        " mrseq r0, msp                                             \n"
+        " mrsne r0, psp                                             \n"
+        " ldr r1, [r0, #24]                                         \n"
+        " ldr r2, handler2_address_const                            \n"
+        " bx r2                                                     \n"
+        " handler2_address_const: .word prvGetRegistersFromStack    \n"
+    );
+#endif
 }
 
 
@@ -201,16 +211,16 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
-#include "FreeRTOS.h"
-#include "task.h"
 void SysTick_Handler(void)
 {
   HAL_IncTick();
+
+#ifdef USE_FREERTOS
   if(xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
   {
     xPortSysTickHandler();
   }
-//  xPortSysTickHandler();
+#endif
 }
 
 #ifdef USE_USB_FS

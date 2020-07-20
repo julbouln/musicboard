@@ -168,6 +168,7 @@ int8_t STORAGE_Write(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t blk_
 {
   QSPI_write_access();
   QSPI_readwrite_mode();
+  QSPI_set_writing();
 
   if (BSP_QSPI_Erase_Block(blk_addr * STORAGE_BLK_SIZ) != QSPI_OK) {
     return -1;
